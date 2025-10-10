@@ -1,7 +1,7 @@
-# K-pop News Digest Project Notes
+# K-pop Digest Project Notes
 
-- Build a simple website named K-pop News Digest.
-- Domain: kpopnewsdigest.com (unregistered but confirmed available).
+- Build a simple website named K-pop Digest.
+- Domain: kpopdigest.com (registered and reserved by the team).
 - Fetch K-pop news headlines and summaries via a news search API, rewrite them in natural English, and present them with source links.
 - Frontend: deploy on Vercel.
 - Backend: run on Google Cloud Run, integrate the news search API, call an LLM to rewrite articles, and store records in the database.
