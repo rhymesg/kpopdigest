@@ -24,6 +24,8 @@ model Article {
   category      String @default("news")   // news, blog, community, etc
   source        String                    // Actual news outlet name (e.g., "Yonhap News")
   summary       String?                   // AI-generated summary
+  viewCount          Int      @default(0)     // AI-generated title click
+  externalClickCount Int      @default(0)     // Raw title click (redirect count)
   createdAt     DateTime  @default(now()) // Timestamp when the article was added
   updatedAt     DateTime  @updatedAt
 
