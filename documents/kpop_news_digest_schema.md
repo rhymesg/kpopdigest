@@ -21,6 +21,7 @@ model Article {
   titleRaw      String                    // Original or literal English title
   publishedAt   DateTime
   api           String                    // Source API name (e.g., "naver", "daum", "rss-yonhap")
+  category      String @default("news")   // news, blog, community, etc
   source        String                    // Actual news outlet name (e.g., "Yonhap News")
   summary       String?                   // AI-generated summary
   createdAt     DateTime  @default(now()) // Timestamp when the article was added
