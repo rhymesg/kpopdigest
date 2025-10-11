@@ -46,21 +46,26 @@ def _resolve_artist(artist: str) -> ArtistDefinition:
         ) from exc
 
 
-def _fetch_articles(api: SupportedAPI, query: str, *, artist: str, limit: int) -> list[ArticleOriginal]:
+def _fetch_articles(
+    api: SupportedAPI,
+    *,
+    definition: ArtistDefinition,
+    limit: int,
+) -> list[ArticleOriginal]:
+    query = definition.search_query
     if limit <= 0:
         return []
 
     if api == "naver":
-        return fetch_naver_news(query, artist=artist, display=limit)[:limit]
+        return fetch_naver_news(query, artist=definition.display_name, display=limit)[:limit]
     if api == "daum":
-        return fetch_daum_web(query, artist=artist, size=limit)[:limit]
+        return fetch_daum_web(query, artist=definition.display_name, size=limit)[:limit]
 
     raise PipelineError(f"Unsupported API: {api}")
 
 
 def fetch_and_rewrite(
     api: SupportedAPI,
-    query: str,
     *,
     artist: str,
     limit: int,
@@ -69,8 +74,11 @@ def fetch_and_rewrite(
     """Fetch articles from the chosen API and rewrite them via ChatGPT."""
 
     definition = _resolve_artist(artist)
-    print(f"[pipeline] Fetching up to {limit} '{api}' results for artist '{artist}' and query '{query}'...")
-    articles = _fetch_articles(api, query, artist=definition.display_name, limit=limit)
+    print(
+        f"[pipeline] Fetching up to {limit} '{api}' results for artist '{definition.display_name}' "
+        f"(query: {definition.search_query})..."
+    )
+    articles = _fetch_articles(api, definition=definition, limit=limit)
     print(f"[pipeline] Retrieved {len(articles)} articles.")
     if not articles:
         return articles, []
@@ -94,7 +102,6 @@ def fetch_and_rewrite(
 
 def fetch_rewrite_and_store(
     api: SupportedAPI,
-    query: str,
     *,
     artist: str,
     limit: int,
@@ -104,9 +111,10 @@ def fetch_rewrite_and_store(
 
     definition = _resolve_artist(artist)
     print(
-        f"[pipeline] Fetching up to {limit} '{api}' results for artist '{artist}' and query '{query}'..."
+        f"[pipeline] Fetching up to {limit} '{api}' results for artist '{definition.display_name}' "
+        f"(query: {definition.search_query})..."
     )
-    articles = _fetch_articles(api, query, artist=definition.display_name, limit=limit)
+    articles = _fetch_articles(api, definition=definition, limit=limit)
     print(f"[pipeline] Retrieved {len(articles)} articles.")
     if not articles:
         return []
@@ -119,6 +127,7 @@ def fetch_rewrite_and_store(
             total = min(len(articles), limit)
             stored: list[RewriteResult] = []
             linked_existing = 0
+            enabled_count = 0
 
             for index, article in enumerate(articles[:limit], start=1):
                 preview = article.title_original[:60]
@@ -231,10 +240,13 @@ def fetch_rewrite_and_store(
                         f"Failed to insert article {article.original_url}: {exc}"
                     ) from exc
                 stored.append(RewriteResult(article=article, rewrite=rewrite))
+                if enabled:
+                    enabled_count += 1
 
             skipped = max(total - len(stored) - linked_existing, 0)
             print(
-                f"[pipeline] Completed. Stored {len(stored)} new articles, linked {linked_existing} existing, skipped {skipped} duplicates."
+                f"[pipeline] Completed. Stored {len(stored)} new articles ({enabled_count} enabled), "
+                f"linked {linked_existing} existing, skipped {skipped} duplicates."
             )
             return stored
     except DatabaseError as exc:

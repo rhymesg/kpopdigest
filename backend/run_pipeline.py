@@ -6,6 +6,7 @@ import argparse
 import json
 import sys
 
+from src.artist_registry import list_registered_artists
 from src.pipeline import (
     PipelineError,
     fetch_and_rewrite,
@@ -16,13 +17,22 @@ from src.pipeline import (
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Fetch articles and rewrite them via ChatGPT.")
     parser.add_argument(
-        "api",
+        "--api",
         choices=["naver", "daum", "all"],
-        help="Source API to query (use 'all' to run every supported API).",
+        default="all",
+        help="Source API to query (default: all).",
     )
-    parser.add_argument("artist", help="Artist name (will be attached to results).")
-    parser.add_argument("query", help="Search query passed to the API.")
-    parser.add_argument("limit", type=int, help="Maximum number of articles to fetch and rewrite.")
+    parser.add_argument(
+        "--artist",
+        action="append",
+        help="Artist name (canonical label). Provide multiple times or omit to process all registered artists.",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=50,
+        help="Maximum number of articles to fetch per artist (default: 50).",
+    )
     parser.add_argument(
         "--store",
         action="store_true",
@@ -46,41 +56,42 @@ def main() -> int:
 
     try:
         apis = [args.api] if args.api != "all" else ["naver", "daum"]
+        artists = args.artist if args.artist else list_registered_artists()
 
         if args.store:
-            for api_choice in apis:
-                fetch_rewrite_and_store(
-                    api_choice,
-                    args.query,
-                    artist=args.artist,
-                    limit=args.limit,
-                    model=args.model,
-                )
+            for artist_name in artists:
+                for api_choice in apis:
+                    fetch_rewrite_and_store(
+                        api_choice,
+                        artist=artist_name,
+                        limit=args.limit,
+                        model=args.model,
+                    )
         else:
             payload = []
-            for api_choice in apis:
-                articles, results = fetch_and_rewrite(
-                    api_choice,
-                    args.query,
-                    artist=args.artist,
-                    limit=args.limit,
-                    model=args.model,
-                )
-
-                for article, result in zip(articles, results, strict=False):
-                    payload.append(
-                        {
-                            "artist": article.artist,
-                            "api": api_choice,
-                            "category": article.category,
-                            "source": article.source,
-                            "publishedAt": article.published_at.isoformat(),
-                            "originalUrl": article.original_url,
-                            "titleOriginal": article.title_original,
-                            "description": article.description,
-                            "rewrite": result,
-                        }
+            for artist_name in artists:
+                for api_choice in apis:
+                    articles, results = fetch_and_rewrite(
+                        api_choice,
+                        artist=artist_name,
+                        limit=args.limit,
+                        model=args.model,
                     )
+
+                    for article, result in zip(articles, results, strict=False):
+                        payload.append(
+                            {
+                                "artist": artist_name,
+                                "api": article.api,
+                                "category": article.category,
+                                "source": article.source,
+                                "publishedAt": article.published_at.isoformat(),
+                                "originalUrl": article.original_url,
+                                "titleOriginal": article.title_original,
+                                "description": article.description,
+                                "rewrite": result,
+                            }
+                        )
     except PipelineError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
