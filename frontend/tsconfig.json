@@ -9,7 +9,7 @@
     "allowJs": false,
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "module": "ESNext",
+    "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "resolveJsonModule": true,
     "isolatedModules": true,
