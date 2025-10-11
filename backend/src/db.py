@@ -98,8 +98,11 @@ def get_or_create_artist(conn: psycopg.Connection, *, name: str, slug: str) -> s
         return cur.fetchone()[0]
 
 
-def link_article_to_artist(conn: psycopg.Connection, *, article_id: str, artist_id: str) -> None:
-    """Ensure an Article ↔ Artist association exists."""
+def link_article_to_artist(conn: psycopg.Connection, *, article_id: str, artist_id: str) -> bool:
+    """Ensure an Article ↔ Artist association exists.
+
+    Returns True if a new link was created, False if it already existed.
+    """
 
     with conn.cursor() as cur:
         cur.execute(
@@ -107,3 +110,4 @@ def link_article_to_artist(conn: psycopg.Connection, *, article_id: str, artist_
             'ON CONFLICT ("articleId", "artistId") DO NOTHING',
             (uuid.uuid4().hex, article_id, artist_id),
         )
+        return cur.rowcount > 0

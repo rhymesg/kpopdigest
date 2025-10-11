@@ -147,15 +147,18 @@ def fetch_rewrite_and_store(
                             name=definition.display_name,
                             slug=definition.slug,
                         )
-                        link_article_to_artist(conn, article_id=article_id, artist_id=artist_id)
+                        created = link_article_to_artist(
+                            conn, article_id=article_id, artist_id=artist_id
+                        )
                         conn.commit()
                     except psycopg.Error as exc:
                         conn.rollback()
                         raise PipelineError(
                             f"Failed to link existing article {article.original_url}: {exc}"
                         ) from exc
-                    linked_existing += 1
-                    print("[pipeline]    -> Already stored (URL match), linked to artist.")
+                    if created:
+                        linked_existing += 1
+                        print("[pipeline]    -> Already stored, linked to artist.")
                     continue
 
                 if not is_alive:
@@ -218,7 +221,9 @@ def fetch_rewrite_and_store(
                         name=definition.display_name,
                         slug=definition.slug,
                     )
-                    link_article_to_artist(conn, article_id=article_id, artist_id=artist_id)
+                    link_article_to_artist(
+                        conn, article_id=article_id, artist_id=artist_id
+                    )
                     conn.commit()
                 except psycopg.Error as exc:
                     conn.rollback()
