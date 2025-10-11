@@ -170,8 +170,9 @@ def fetch_rewrite_and_store(
                         print("[pipeline]    -> Already stored, linked to artist.")
                     continue
 
+                disabled_reason: str | None = None
                 if not is_alive:
-                    print("[pipeline]    -> URL unreachable; will mark as disabled.")
+                    disabled_reason = "unreachable"
 
                 try:
                     rewrite = client.rewrite(article)
@@ -179,6 +180,9 @@ def fetch_rewrite_and_store(
                     raise PipelineError(
                         f"LLM rewrite failed for {article.original_url}: {exc}"
                     ) from exc
+
+                if not rewrite["relevant"]:
+                    disabled_reason = disabled_reason or "irrelevant"
 
                 enabled = bool(rewrite["relevant"]) and is_alive
                 now = datetime.now(timezone.utc)
@@ -242,6 +246,8 @@ def fetch_rewrite_and_store(
                 stored.append(RewriteResult(article=article, rewrite=rewrite))
                 if enabled:
                     enabled_count += 1
+                elif disabled_reason:
+                    print(f"[pipeline]    -> Disabled: ({disabled_reason}).")
 
             skipped = max(total - len(stored) - linked_existing, 0)
             print(
