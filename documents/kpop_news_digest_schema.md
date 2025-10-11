@@ -15,10 +15,12 @@ It supports articles aggregated from various APIs (e.g., Naver, Daum, RSS) and a
 ```prisma
 model Article {
   id            String   @id @default(cuid())
+  enabled       Boolean @default(true) // 표시 여부 (true: 공개, false: 숨김)
   originalUrl   String   @unique          // Original article URL (as received)
   finalUrl      String?                   // Redirected final URL (if available)
-  title         String?                   // AI-generated rewritten title
+  titleOriginal String                    // 원문 제목 그대로
   titleRaw      String                    // Original or literal English title
+  title         String?                   // AI-generated rewritten title
   publishedAt   DateTime
   api           String                    // Source API name (e.g., "naver", "daum", "rss-yonhap")
   category      String @default("news")   // news, blog, community, etc
