@@ -56,13 +56,17 @@ export function ArticleBoard({ initialArticles, artistSlug }: ArticleBoardProps)
               day: 'numeric',
               hour: '2-digit',
               minute: '2-digit',
+              timeZone: 'Asia/Seoul',
             });
         return (
           <div key={article.id} className="card">
             <button className="title" onClick={() => toggle(article.id)}>
               <span className="source">[{article.source}]</span>
               <span>{mainTitle}</span>
-              <span className="timestamp">{publishedLabel}</span>
+              <span className="timestamp">
+                <span className="timestamp__label">{publishedLabel}</span>
+                <span className="timestamp__zone">KST</span>
+              </span>
             </button>
             {isExpanded && (
               <div className="details">
@@ -102,8 +106,8 @@ export function ArticleBoard({ initialArticles, artistSlug }: ArticleBoardProps)
         .title {
           width: 100%;
           display: flex;
-          align-items: center;
-          gap: 12px;
+          align-items: flex-start;
+          gap: 10px;
           padding: 16px;
           background: none;
           border: none;
@@ -122,10 +126,26 @@ export function ArticleBoard({ initialArticles, artistSlug }: ArticleBoardProps)
           letter-spacing: 0.08em;
           font-size: 12px;
         }
+        .headline {
+          flex: 1 1 auto;
+          margin-right: 0;
+        }
         .timestamp {
           margin-left: auto;
+          display: inline-flex;
+          align-items: baseline;
+          gap: 4px;
+          flex: 0 0 150px;
+          min-width: 150px;
+          justify-content: flex-end;
           font-size: 13px;
           color: rgba(226, 232, 240, 0.6);
+          white-space: nowrap;
+        }
+        .timestamp__zone {
+          font-size: 11px;
+          letter-spacing: 0.04em;
+          opacity: 0.7;
         }
         .details {
           padding: 16px 24px 24px;
