@@ -12,8 +12,7 @@ class ArtistDefinition:
     display_name: str
     search_query: str
 
-
-export const REGISTERED_ARTISTS: ArtistDefinition[] = [
+REGISTERED_ARTISTS: List[ArtistDefinition] = [
     ArtistDefinition(slug="blackpink", display_name="BLACKPINK", search_query="블랙핑크,BLACKPINK"),
     ArtistDefinition(slug="bts", display_name="BTS", search_query="방탄소년단,BTS"),
     ArtistDefinition(slug="ive", display_name="IVE", search_query="아이브,IVE"),
