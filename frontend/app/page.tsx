@@ -31,6 +31,13 @@ export default async function HomePage() {
       <section>
         <ArticleBoard initialArticles={articles} />
       </section>
+
+      <section className="seo-blurb">
+        <h2>K-pop news, blogs, and community photo posts in English</h2>
+        <p>
+          K-pop Digest curates Korean idol coverage from newsrooms, blog editors, and community/photo circles, then rewrites each headline and summary in clear English. Follow the latest updates across BLACKPINK, BTS, IVE, aespa, Stray Kids, NewJeans, ENHYPEN, BABYMONSTER, and more—always linking back to the original source.
+        </p>
+      </section>
     </main>
   );
 }

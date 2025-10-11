@@ -38,6 +38,13 @@ export default async function ArtistPage({ params }: Props) {
         <ArticleBoard initialArticles={articles} artistSlug={artist.slug} />
       </section>
 
+      <section className="seo-blurb">
+        <h2>{artist.name} news, blogs, and community updates</h2>
+        <p>
+          We translate and polish Korean-language coverage about {artist.name}—from breaking news reports to fan blog recaps and community photo posts—so global fans can preview each story before visiting the original outlet.
+        </p>
+      </section>
+
     </main>
   );
 }
