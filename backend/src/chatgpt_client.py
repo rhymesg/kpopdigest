@@ -32,7 +32,9 @@ class ChatGPTClient:
         "   - titleRaw: translate titleOriginal literally into clear English.\n"
         "   - title: write a catchy, natural English headline for fans of the "
         "artist, using light K-pop slang if it fits.\n"
-        "   - summary: write a concise English summary that covers the key news."
+        "   - summary: write a single concise sentence (under 30 words) highlighting "
+        "the key takeaway and, if obvious, note whether it reads like news, a blog "
+        "post, or a community/photo update."
     )
 
     def __init__(self, *, api_key: str | None = None, model: str = "gpt-5-mini") -> None:

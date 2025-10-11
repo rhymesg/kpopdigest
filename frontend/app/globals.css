@@ -38,6 +38,11 @@ main {
   margin: 12px 0 24px;
   color: rgba(226, 232, 240, 0.75);
 }
+.hero .disclaimer {
+  margin-top: 4px;
+  font-size: 13px;
+  color: rgba(148, 163, 184, 0.75);
+}
 
 .hero nav {
   display: flex;
@@ -60,10 +65,6 @@ main {
 
 .hero--artist {
   margin-bottom: 32px;
-}
-
-.hero--artist p {
-  margin: 8px 0 20px;
 }
 
 .hero--artist nav a {

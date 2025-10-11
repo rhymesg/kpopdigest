@@ -25,7 +25,10 @@ export default async function ArtistPage({ params }: Props) {
     <main>
       <header className="hero hero--artist">
         <h1>{artist.name}</h1>
-        <p>Latest stories featuring {artist.name}. Tap a headline for the AI recap.</p>
+        <p>Fresh Korean entertainment stories for global fans.</p>
+        <p className="disclaimer">
+          We respect the original content. Titles and summaries are rewritten, and every link sends you to the source.
+        </p>
         <nav>
           <Link href="/">← Back to all artists</Link>
         </nav>
