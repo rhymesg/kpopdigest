@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 import { ArticleBoard } from './components/ArticleBoard';
 import { fetchArticles } from '@/lib/articles';
-import { ARTISTS } from '@/lib/artists';
+import { fetchArtistsByViews } from '@/lib/artists';
 
 const PAGE_SIZE = 20;
 
@@ -10,6 +10,7 @@ export const revalidate = 0;
 
 export default async function HomePage() {
   const articles = await fetchArticles({ limit: PAGE_SIZE });
+  const artists = await fetchArtistsByViews();
 
   return (
     <main>
@@ -20,7 +21,7 @@ export default async function HomePage() {
           We respect the original content. Titles and summaries are rewritten, and every link sends you to the source.
         </p>
         <nav>
-          {ARTISTS.map((artist) => (
+          {artists.map((artist) => (
             <Link key={artist.slug} href={`/${artist.slug}`}>
               {artist.name}
             </Link>

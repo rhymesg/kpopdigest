@@ -2,8 +2,9 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
 import { ArticleBoard } from '../components/ArticleBoard';
-import { ARTISTS } from '@/lib/artists';
 import { fetchArticles } from '@/lib/articles';
+import { getArtistBySlug } from '@/lib/artists';
+import { incrementArtistPageView } from '@/lib/metrics';
 
 const PAGE_SIZE = 20;
 
@@ -14,11 +15,12 @@ interface Props {
 }
 
 export default async function ArtistPage({ params }: Props) {
-  const artist = ARTISTS.find((item) => item.slug === params.slug);
+  const artist = getArtistBySlug(params.slug);
   if (!artist) {
     notFound();
   }
 
+  await incrementArtistPageView(artist.slug);
   const articles = await fetchArticles({ limit: PAGE_SIZE, artistSlug: artist.slug });
 
   return (

@@ -73,6 +73,13 @@ def ensure_schema(conn: psycopg.Connection) -> None:
             UNIQUE ("articleId", "artistId")
         )
         """,
+        """
+        CREATE TABLE IF NOT EXISTS "ArtistMetrics" (
+            "artistId" TEXT PRIMARY KEY REFERENCES "Artist"("id") ON DELETE CASCADE,
+            "pageViews" BIGINT NOT NULL DEFAULT 0,
+            "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """,
     ]
 
     with conn.cursor() as cur:
@@ -88,14 +95,21 @@ def get_or_create_artist(conn: psycopg.Connection, *, name: str, slug: str) -> s
         cur.execute('SELECT "id" FROM "Artist" WHERE "slug" = %s', (slug,))
         row = cur.fetchone()
         if row:
-            return row[0]
+            artist_id = row[0]
+        else:
+            artist_id = uuid.uuid4().hex
+            cur.execute(
+                'INSERT INTO "Artist" ("id", "name", "slug") VALUES (%s, %s, %s) RETURNING "id"',
+                (artist_id, name, slug),
+            )
+            artist_id = cur.fetchone()[0]
 
-        artist_id = uuid.uuid4().hex
         cur.execute(
-            'INSERT INTO "Artist" ("id", "name", "slug") VALUES (%s, %s, %s) RETURNING "id"',
-            (artist_id, name, slug),
+            'INSERT INTO "ArtistMetrics" ("artistId") VALUES (%s) ON CONFLICT ("artistId") DO NOTHING',
+            (artist_id,),
         )
-        return cur.fetchone()[0]
+
+        return artist_id
 
 
 def link_article_to_artist(conn: psycopg.Connection, *, article_id: str, artist_id: str) -> bool:
