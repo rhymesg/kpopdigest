@@ -9,10 +9,17 @@ from typing import Literal, Sequence, Tuple
 
 import psycopg
 
+from .artist_registry import ArtistDefinition, get_artist_definition
 from .article_models import ArticleOriginal
 from .chatgpt_client import ChatGPTClient, ChatGPTRewriteError
 from .daum_api import fetch_daum_web
-from .db import DatabaseError, ensure_article_table, get_connection
+from .db import (
+    DatabaseError,
+    ensure_schema,
+    get_connection,
+    get_or_create_artist,
+    link_article_to_artist,
+)
 from .llm_models import ChatGPTRewriteOutput
 from .naver_api import fetch_naver_news
 from .url_utils import resolve_final_url
@@ -28,6 +35,15 @@ class PipelineError(RuntimeError):
 class RewriteResult:
     article: ArticleOriginal
     rewrite: ChatGPTRewriteOutput
+
+
+def _resolve_artist(artist: str) -> ArtistDefinition:
+    try:
+        return get_artist_definition(artist)
+    except KeyError as exc:
+        raise PipelineError(
+            f"Unknown artist '{artist}'. Update backend/src/artist_registry.py to register it."
+        ) from exc
 
 
 def _fetch_articles(api: SupportedAPI, query: str, *, artist: str, limit: int) -> list[ArticleOriginal]:
@@ -52,8 +68,9 @@ def fetch_and_rewrite(
 ) -> Tuple[Sequence[ArticleOriginal], Sequence[ChatGPTRewriteOutput]]:
     """Fetch articles from the chosen API and rewrite them via ChatGPT."""
 
+    definition = _resolve_artist(artist)
     print(f"[pipeline] Fetching up to {limit} '{api}' results for artist '{artist}' and query '{query}'...")
-    articles = _fetch_articles(api, query, artist=artist, limit=limit)
+    articles = _fetch_articles(api, query, artist=definition.display_name, limit=limit)
     print(f"[pipeline] Retrieved {len(articles)} articles.")
     if not articles:
         return articles, []
@@ -85,21 +102,23 @@ def fetch_rewrite_and_store(
 ) -> list[RewriteResult]:
     """Fetch new articles, rewrite them, and persist results to the database."""
 
+    definition = _resolve_artist(artist)
     print(
         f"[pipeline] Fetching up to {limit} '{api}' results for artist '{artist}' and query '{query}'..."
     )
-    articles = _fetch_articles(api, query, artist=artist, limit=limit)
+    articles = _fetch_articles(api, query, artist=definition.display_name, limit=limit)
     print(f"[pipeline] Retrieved {len(articles)} articles.")
     if not articles:
         return []
 
     try:
         with get_connection() as conn:
-            ensure_article_table(conn)
+            ensure_schema(conn)
 
             client = ChatGPTClient(model=model)
             total = min(len(articles), limit)
             stored: list[RewriteResult] = []
+            linked_existing = 0
 
             for index, article in enumerate(articles[:limit], start=1):
                 preview = article.title_original[:60]
@@ -115,13 +134,28 @@ def fetch_rewrite_and_store(
 
                 with conn.cursor() as cur:
                     cur.execute(
-                        'SELECT 1 FROM "Article" WHERE "originalUrl" = ANY(%s) OR "finalUrl" = ANY(%s) LIMIT 1',
+                        'SELECT "id" FROM "Article" WHERE "originalUrl" = ANY(%s) OR "finalUrl" = ANY(%s) LIMIT 1',
                         (urls_to_check, urls_to_check),
                     )
-                    exists = cur.fetchone() is not None
+                    row = cur.fetchone()
 
-                if exists:
-                    print("[pipeline]    -> Already stored (URL match), skipping.")
+                if row:
+                    article_id = row[0]
+                    try:
+                        artist_id = get_or_create_artist(
+                            conn,
+                            name=definition.display_name,
+                            slug=definition.slug,
+                        )
+                        link_article_to_artist(conn, article_id=article_id, artist_id=artist_id)
+                        conn.commit()
+                    except psycopg.Error as exc:
+                        conn.rollback()
+                        raise PipelineError(
+                            f"Failed to link existing article {article.original_url}: {exc}"
+                        ) from exc
+                    linked_existing += 1
+                    print("[pipeline]    -> Already stored (URL match), linked to artist.")
                     continue
 
                 if not is_alive:
@@ -137,6 +171,7 @@ def fetch_rewrite_and_store(
                 enabled = bool(rewrite["relevant"]) and is_alive
                 now = datetime.now(timezone.utc)
                 try:
+                    article_id = uuid.uuid4().hex
                     with conn.cursor() as cur:
                         cur.execute(
                             """
@@ -161,7 +196,7 @@ def fetch_rewrite_and_store(
                             )
                             """,
                             (
-                                uuid.uuid4().hex,
+                                article_id,
                                 enabled,
                                 article.original_url,
                                 final_url_to_store,
@@ -178,6 +213,12 @@ def fetch_rewrite_and_store(
                                 now,
                             ),
                         )
+                    artist_id = get_or_create_artist(
+                        conn,
+                        name=definition.display_name,
+                        slug=definition.slug,
+                    )
+                    link_article_to_artist(conn, article_id=article_id, artist_id=artist_id)
                     conn.commit()
                 except psycopg.Error as exc:
                     conn.rollback()
@@ -186,9 +227,9 @@ def fetch_rewrite_and_store(
                     ) from exc
                 stored.append(RewriteResult(article=article, rewrite=rewrite))
 
-            skipped = total - len(stored)
+            skipped = max(total - len(stored) - linked_existing, 0)
             print(
-                f"[pipeline] Completed. Stored {len(stored)} new articles, skipped {skipped} duplicates."
+                f"[pipeline] Completed. Stored {len(stored)} new articles, linked {linked_existing} existing, skipped {skipped} duplicates."
             )
             return stored
     except DatabaseError as exc:

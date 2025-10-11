@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from contextlib import contextmanager
+import uuid
 
 import psycopg
 
@@ -30,28 +31,79 @@ def get_connection():
         conn.close()
 
 
-def ensure_article_table(conn: psycopg.Connection) -> None:
-    """Create the Article table if it does not already exist."""
+def ensure_schema(conn: psycopg.Connection) -> None:
+    """Create core tables if they do not already exist."""
 
-    ddl = """
-    CREATE TABLE IF NOT EXISTS "Article" (
-        "id" TEXT PRIMARY KEY,
-        "enabled" BOOLEAN NOT NULL DEFAULT TRUE,
-        "originalUrl" TEXT NOT NULL UNIQUE,
-        "finalUrl" TEXT,
-        "title" TEXT,
-        "titleRaw" TEXT NOT NULL,
-        "publishedAt" TIMESTAMPTZ NOT NULL,
-        "api" TEXT NOT NULL,
-        "category" TEXT NOT NULL,
-        "source" TEXT NOT NULL,
-        "summary" TEXT,
-        "viewCount" INTEGER NOT NULL DEFAULT 0,
-        "externalClickCount" INTEGER NOT NULL DEFAULT 0,
-        "createdAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-    """
+    ddl_statements = [
+        """
+        CREATE TABLE IF NOT EXISTS "Article" (
+            "id" TEXT PRIMARY KEY,
+            "enabled" BOOLEAN NOT NULL DEFAULT TRUE,
+            "originalUrl" TEXT NOT NULL UNIQUE,
+            "finalUrl" TEXT,
+            "title" TEXT,
+            "titleRaw" TEXT NOT NULL,
+            "publishedAt" TIMESTAMPTZ NOT NULL,
+            "api" TEXT NOT NULL,
+            "category" TEXT NOT NULL,
+            "source" TEXT NOT NULL,
+            "summary" TEXT,
+            "viewCount" INTEGER NOT NULL DEFAULT 0,
+            "externalClickCount" INTEGER NOT NULL DEFAULT 0,
+            "createdAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS "Artist" (
+            "id" TEXT PRIMARY KEY,
+            "name" TEXT NOT NULL UNIQUE,
+            "slug" TEXT NOT NULL UNIQUE,
+            "createdAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS "ArticleArtist" (
+            "id" TEXT PRIMARY KEY,
+            "articleId" TEXT NOT NULL REFERENCES "Article"("id") ON DELETE CASCADE,
+            "artistId" TEXT NOT NULL REFERENCES "Artist"("id") ON DELETE CASCADE,
+            "createdAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE ("articleId", "artistId")
+        )
+        """,
+    ]
+
     with conn.cursor() as cur:
-        cur.execute(ddl)
-        conn.commit()
+        for ddl in ddl_statements:
+            cur.execute(ddl)
+    conn.commit()
+
+
+def get_or_create_artist(conn: psycopg.Connection, *, name: str, slug: str) -> str:
+    """Return an artist id for the given slug, inserting a new row if needed."""
+
+    with conn.cursor() as cur:
+        cur.execute('SELECT "id" FROM "Artist" WHERE "slug" = %s', (slug,))
+        row = cur.fetchone()
+        if row:
+            return row[0]
+
+        artist_id = uuid.uuid4().hex
+        cur.execute(
+            'INSERT INTO "Artist" ("id", "name", "slug") VALUES (%s, %s, %s) RETURNING "id"',
+            (artist_id, name, slug),
+        )
+        return cur.fetchone()[0]
+
+
+def link_article_to_artist(conn: psycopg.Connection, *, article_id: str, artist_id: str) -> None:
+    """Ensure an Article ↔ Artist association exists."""
+
+    with conn.cursor() as cur:
+        cur.execute(
+            'INSERT INTO "ArticleArtist" ("id", "articleId", "artistId") VALUES (%s, %s, %s) '
+            'ON CONFLICT ("articleId", "artistId") DO NOTHING',
+            (uuid.uuid4().hex, article_id, artist_id),
+        )

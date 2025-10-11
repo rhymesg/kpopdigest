@@ -38,6 +38,8 @@ def main() -> int:
         print("Limit must be greater than zero.", file=sys.stderr)
         return 2
 
+    payload: list[dict] | None = None
+
     try:
         if args.store:
             rewrite_results = fetch_rewrite_and_store(
@@ -75,7 +77,7 @@ def main() -> int:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
 
-    if not args.store:
+    if not args.store and payload is not None:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
     return 0
 
