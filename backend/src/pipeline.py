@@ -177,9 +177,11 @@ def fetch_rewrite_and_store(
                 try:
                     rewrite = client.rewrite(article)
                 except ChatGPTRewriteError as exc:
-                    raise PipelineError(
-                        f"LLM rewrite failed for {article.original_url}: {exc}"
-                    ) from exc
+                    print(
+                        f"[pipeline]    -> LLM rewrite failed: {exc}. Skipping article.",
+                        flush=True,
+                    )
+                    continue
 
                 if not rewrite["relevant"]:
                     disabled_reason = disabled_reason or "irrelevant"
