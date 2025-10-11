@@ -13,7 +13,7 @@ class ArtistDefinition:
     search_query: str
 
 
-_RAW_ARTISTS = (
+export const REGISTERED_ARTISTS: ArtistDefinition[] = [
     ArtistDefinition(slug="blackpink", display_name="BLACKPINK", search_query="블랙핑크,BLACKPINK"),
     ArtistDefinition(slug="bts", display_name="BTS", search_query="방탄소년단,BTS"),
     ArtistDefinition(slug="ive", display_name="IVE", search_query="아이브,IVE"),
@@ -22,11 +22,11 @@ _RAW_ARTISTS = (
     ArtistDefinition(slug="babymonster", display_name="BABYMONSTER", search_query="베이비몬스터,BABYMONSTER"),
     ArtistDefinition(slug="newjeans", display_name="NewJeans", search_query="뉴진스,NewJeans"),
     ArtistDefinition(slug="enhypen", display_name="ENHYPEN", search_query="엔하이픈,ENHYPEN"),
-)
+]
 
 
 _ARTISTS: Dict[str, ArtistDefinition] = {}
-for definition in _RAW_ARTISTS:
+for definition in REGISTERED_ARTISTS:
     keys = {definition.display_name.upper(), definition.slug.upper()}
     for token in definition.search_query.split(","):
         keys.add(token.strip().upper())
@@ -42,4 +42,4 @@ def get_artist_definition(name: str) -> ArtistDefinition:
 
 
 def list_registered_artists() -> List[str]:
-    return [definition.display_name for definition in _RAW_ARTISTS]
+    return [definition.display_name for definition in REGISTERED_ARTISTS]
