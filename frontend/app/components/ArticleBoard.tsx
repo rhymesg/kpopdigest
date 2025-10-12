@@ -49,27 +49,38 @@ export function ArticleBoard({ initialArticles, artistSlug }: ArticleBoardProps)
         const mainTitle = article.title ?? article.titleRaw;
         const destination = article.originalUrl;
         const published = new Date(article.publishedAt);
-        const publishedLabel = Number.isNaN(published.getTime())
+        const categoryClass = `meta__source meta__source--${article.category || 'default'}`;
+        const publishedDateLabel = Number.isNaN(published.getTime())
           ? 'Unknown date'
-          : published.toLocaleString('en-US', {
+          : published.toLocaleDateString('en-US', {
               month: 'short',
               day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-              timeZone: 'Asia/Seoul',
             });
         return (
           <div key={article.id} className="card">
             <button className="title" onClick={() => toggle(article.id)}>
-              <span className="source">[{article.source}]</span>
-              <span>{mainTitle}</span>
-              <span className="timestamp">
-                <span className="timestamp__label">{publishedLabel}</span>
-                <span className="timestamp__zone">KST</span>
+              <span className="headline">{mainTitle}</span>
+              <span className="meta">
+                <span className={categoryClass}>{article.source}</span>
+                <span className="date">{publishedDateLabel}</span>
               </span>
             </button>
             {isExpanded && (
               <div className="details">
+                <div className="meta-row">
+                  <span className="pill pill__category">{article.category}</span>
+                  <span className="pill pill__timestamp">
+                    {Number.isNaN(published.getTime())
+                      ? 'Unknown time'
+                      : published.toLocaleString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          timeZone: 'Asia/Seoul',
+                        }) + ' KST'}
+                  </span>
+                </div>
                 <a href={destination} target="_blank" rel="noreferrer">
                   <h4>{article.titleRaw}</h4>
                 </a>
@@ -106,8 +117,8 @@ export function ArticleBoard({ initialArticles, artistSlug }: ArticleBoardProps)
         .title {
           width: 100%;
           display: flex;
+          justify-content: space-between;
           align-items: flex-start;
-          gap: 10px;
           padding: 16px;
           background: none;
           border: none;
@@ -128,29 +139,63 @@ export function ArticleBoard({ initialArticles, artistSlug }: ArticleBoardProps)
         }
         .headline {
           flex: 1 1 auto;
-          margin-right: 0;
+          padding-right: 4px;
         }
-        .timestamp {
-          margin-left: auto;
-          display: inline-flex;
-          align-items: baseline;
+        .meta {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
           gap: 4px;
-          flex: 0 0 150px;
-          min-width: 150px;
-          justify-content: flex-end;
-          font-size: 13px;
-          color: rgba(226, 232, 240, 0.6);
-          white-space: nowrap;
+          min-width: 140px;
         }
-        .timestamp__zone {
-          font-size: 11px;
-          letter-spacing: 0.04em;
-          opacity: 0.7;
+        .meta__source {
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: rgba(148, 163, 184, 0.85);
+        }
+        .meta__source--news {
+          color: #60a5fa;
+        }
+        .meta__source--blog {
+          color: #34d399;
+        }
+        .meta__source--community {
+          color: #fb7185;
+        }
+        .meta__source--etc {
+          color: rgba(148, 163, 184, 0.85);
+        }
+        .meta .date {
+          font-size: 12px;
+          color: rgba(226, 232, 240, 0.6);
         }
         .details {
           padding: 16px 24px 24px;
           border-top: 1px solid rgba(148, 163, 184, 0.12);
           background: rgba(15, 23, 42, 0.4);
+        }
+        .meta-row {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 12px;
+        }
+        .pill {
+          display: inline-flex;
+          align-items: center;
+          padding: 4px 10px;
+          border-radius: 999px;
+          font-size: 12px;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+        .pill__category {
+          background: rgba(56, 189, 248, 0.12);
+          color: #38bdf8;
+        }
+        .pill__timestamp {
+          background: rgba(148, 163, 184, 0.12);
+          color: rgba(226, 232, 240, 0.75);
         }
         .details h4 {
           margin: 0 0 12px;

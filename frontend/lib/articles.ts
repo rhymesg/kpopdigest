@@ -11,6 +11,7 @@ export interface ArticleRow {
   source: string;
   api: string;
   artist: string;
+  category: string;
 }
 
 export async function fetchArticles(options: {
@@ -28,7 +29,7 @@ export async function fetchArticles(options: {
       result = await client.query(
         `
         SELECT a."id", a."title", a."titleRaw", a."summary", a."originalUrl", a."finalUrl",
-               a."publishedAt", a."source", a."api", ar."slug" AS "artist"
+               a."publishedAt", a."source", a."api", a."category", ar."slug" AS "artist"
         FROM "Article" a
         JOIN "ArticleArtist" aa ON aa."articleId" = a."id"
         JOIN "Artist" ar ON ar."id" = aa."artistId"
@@ -42,7 +43,7 @@ export async function fetchArticles(options: {
       result = await client.query(
         `
         SELECT a."id", a."title", a."titleRaw", a."summary", a."originalUrl", a."finalUrl",
-               a."publishedAt", a."source", a."api",
+               a."publishedAt", a."source", a."api", a."category",
                (
                  SELECT STRING_AGG(ar."slug", ',')
                  FROM "ArticleArtist" aa
@@ -69,6 +70,7 @@ export async function fetchArticles(options: {
         source,
         api,
         artist,
+        category,
       } = row;
 
       const published = publishedAt instanceof Date ? publishedAt : new Date(publishedAt);
@@ -87,6 +89,7 @@ export async function fetchArticles(options: {
         source,
         api,
         artist,
+        category,
       } satisfies ArticleRow;
     });
   } finally {

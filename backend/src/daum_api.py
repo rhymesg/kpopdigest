@@ -62,6 +62,8 @@ _BLOG_HOST_TOKENS = {
     "blog",
     "tistory",
     "medium",
+    "daum",
+    "kstarad",
 }
 
 _COMMUNITY_HOST_TOKENS = {
@@ -72,12 +74,16 @@ _COMMUNITY_HOST_TOKENS = {
     "gall",
     "ppomppu",
     "pann",
+    "inven",
+    "etoland",
 }
 
 _VIDEO_HOST_TOKENS = {
     "youtube",
     "youtu.be",
 }
+
+_NEWS_HOST_TOKENS: set[str] = set()
 
 
 def _infer_category(url: str) -> str:
@@ -86,9 +92,9 @@ def _infer_category(url: str) -> str:
         return "blog"
     if any(token in host for token in _COMMUNITY_HOST_TOKENS):
         return "community"
-    if any(token in host for token in _VIDEO_HOST_TOKENS):
-        return "etc"
-    return "news"
+    if any(token in host for token in _NEWS_HOST_TOKENS):
+        return "news"
+    return "etc"
 
 
 def fetch_daum_web(
