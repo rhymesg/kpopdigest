@@ -59,11 +59,11 @@ export function ArticleBoard({ initialArticles, artistSlug }: ArticleBoardProps)
         return (
           <div key={article.id} className="card">
             <button className="title" onClick={() => toggle(article.id)}>
-              <span className="headline">{mainTitle}</span>
-              <span className="meta">
+              <div className="meta-line">
                 <span className={categoryClass}>{article.source}</span>
                 <span className="date">{publishedDateLabel}</span>
-              </span>
+              </div>
+              <span className="headline">{mainTitle}</span>
             </button>
             {isExpanded && (
               <div className="details">
@@ -117,8 +117,8 @@ export function ArticleBoard({ initialArticles, artistSlug }: ArticleBoardProps)
         .title {
           width: 100%;
           display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
+          flex-direction: column;
+          gap: 8px;
           padding: 16px;
           background: none;
           border: none;
@@ -131,22 +131,15 @@ export function ArticleBoard({ initialArticles, artistSlug }: ArticleBoardProps)
         .title:hover {
           background: rgba(148, 163, 184, 0.08);
         }
-        .source {
-          color: #38bdf8;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-          font-size: 12px;
+        .meta-line {
+          display: flex;
+          justify-content: space-between;
+          align-items: baseline;
+          gap: 12px;
         }
         .headline {
           flex: 1 1 auto;
           padding-right: 4px;
-        }
-        .meta {
-          display: flex;
-          flex-direction: column;
-          align-items: flex-end;
-          gap: 4px;
-          min-width: 140px;
         }
         .meta__source {
           font-size: 12px;
@@ -166,7 +159,7 @@ export function ArticleBoard({ initialArticles, artistSlug }: ArticleBoardProps)
         .meta__source--etc {
           color: rgba(148, 163, 184, 0.85);
         }
-        .meta .date {
+        .meta-line .date {
           font-size: 12px;
           color: rgba(226, 232, 240, 0.6);
         }
