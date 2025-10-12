@@ -34,7 +34,8 @@ class ChatGPTClient:
         "artist, using light K-pop slang if it fits.\n"
         "   - summary: write a single concise sentence (under 30 words) highlighting "
         "the key takeaway and, if obvious, note whether it reads like news, a blog "
-        "post, or a community/photo update."
+        "post, or a community/photo update.\n"
+        "5. If the page is a community update with no clear photo or video content, treat it as not relevant."
     )
 
     def __init__(self, *, api_key: str | None = None, model: str = "gpt-5-mini") -> None:

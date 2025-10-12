@@ -36,7 +36,7 @@ export default async function HomePage() {
       <section className="seo-blurb">
         <h2>K-pop news, blogs, and community photo posts in English</h2>
         <p>
-          K-pop Digest curates Korean idol coverage from newsrooms, blog editors, and community/photo circles, then rewrites each headline and summary in clear English. Follow the latest updates across BLACKPINK, BTS, IVE, aespa, Stray Kids, NewJeans, ENHYPEN, BABYMONSTER, and more—always linking back to the original source.
+          K-pop Digest curates idol coverage straight from the Korean sources fans rely on—Korean portals (Naver, Daum), entertainment newsrooms, and community/photo hubs like DCInside, Theqoo, Pann, and FMKorea. Every headline and summary is rewritten in clear English so you can preview the story before jumping to the original outlet. Follow the latest moves from BLACKPINK, BTS, IVE, aespa, Stray Kids, NewJeans, ENHYPEN, BABYMONSTER, and more.
         </p>
       </section>
     </main>

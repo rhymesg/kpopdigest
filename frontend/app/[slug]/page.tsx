@@ -43,7 +43,7 @@ export default async function ArtistPage({ params }: Props) {
       <section className="seo-blurb">
         <h2>{artist.name} news, blogs, and community updates</h2>
         <p>
-          We translate and polish Korean-language coverage about {artist.name}—from breaking news reports to fan blog recaps and community photo posts—so global fans can preview each story before visiting the original outlet.
+          We translate and polish Korean-language coverage about {artist.name} from the same places domestic fans read—Korean portals (Naver, Daum), blogger recaps, and community/photo feeds like DCInside, Theqoo, Pann, and Instiz—so global supporters can skim the highlights before visiting the original story.
         </p>
       </section>
 

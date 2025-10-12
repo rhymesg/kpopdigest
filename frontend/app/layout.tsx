@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'K-pop Digest',
   description:
-    'Fresh K-pop news, blog recaps, and community photo posts rewritten in English for global fans. Discover daily idol headlines and summaries across BLACKPINK, BTS, IVE, Stray Kids, aespa, NewJeans, ENHYPEN, BABYMONSTER, and more.',
+    'Fresh K-pop news, blog recaps, and community photo posts pulled from Korean portals (Naver, Daum), entertainment newsrooms, and idol community boards like DCInside, Theqoo, Pann, and Instiz—rewritten in English for global fans following BLACKPINK, BTS, IVE, Stray Kids, aespa, NewJeans, ENHYPEN, BABYMONSTER, and beyond.',
   keywords: [
     'K-pop news',
     'K-pop blog recaps',
