@@ -55,6 +55,7 @@ export function ArticleBoard({ initialArticles, artistSlug }: ArticleBoardProps)
           : published.toLocaleDateString('en-US', {
               month: 'short',
               day: 'numeric',
+              timeZone: 'Asia/Seoul',
             });
         return (
           <div key={article.id} className="card">
