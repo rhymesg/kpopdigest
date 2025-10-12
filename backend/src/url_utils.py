@@ -9,6 +9,13 @@ import httpx
 _REDIRECT_LIMIT = 5
 _TIMEOUT_SECONDS = 5.0
 
+# URL patterns that should be disabled
+_BLOCKED_URL_PATTERNS = [
+    "koreatimes.com/photonews",
+    "yes24.com/product", 
+    "seoul.co.kr/newsList/international",
+]
+
 
 class URLResolutionError(RuntimeError):
     """Raised when a URL cannot be resolved due to configuration issues."""
@@ -16,6 +23,17 @@ class URLResolutionError(RuntimeError):
 
 def _is_failure_status(status_code: int) -> bool:
     return status_code >= 400
+
+
+def is_url_blocked(url: str) -> bool:
+    """Check if the URL contains any blocked patterns."""
+    if not url:
+        return False
+    
+    for pattern in _BLOCKED_URL_PATTERNS:
+        if pattern in url:
+            return True
+    return False
 
 
 def resolve_final_url(original_url: str) -> Tuple[str | None, bool]:

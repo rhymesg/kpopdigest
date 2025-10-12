@@ -23,7 +23,7 @@ from .db import (
 from .llm_models import ChatGPTRewriteOutput
 from .naver_blog_api import fetch_naver_blog_posts
 from .naver_news_api import fetch_naver_news
-from .url_utils import resolve_final_url
+from .url_utils import resolve_final_url, is_url_blocked
 
 SupportedAPI = Literal["naver_news", "naver_blog", "daum"]
 
@@ -186,6 +186,15 @@ def fetch_rewrite_and_store(
                 if not is_alive:
                     disabled_reason = "unreachable"
 
+                # Check if URL is blocked
+                urls_to_check_for_blocking = [article.original_url]
+                if final_url:
+                    urls_to_check_for_blocking.append(final_url)
+                
+                is_blocked = any(is_url_blocked(url) for url in urls_to_check_for_blocking)
+                if is_blocked:
+                    disabled_reason = disabled_reason or "blocked_url_pattern"
+
                 try:
                     rewrite = client.rewrite(article)
                 except ChatGPTRewriteError as exc:
@@ -198,7 +207,7 @@ def fetch_rewrite_and_store(
                 if not rewrite["relevant"]:
                     disabled_reason = disabled_reason or "irrelevant"
 
-                enabled = bool(rewrite["relevant"]) and is_alive
+                enabled = bool(rewrite["relevant"]) and is_alive and not is_blocked
                 now = datetime.now(timezone.utc)
                 try:
                     article_id = uuid.uuid4().hex
