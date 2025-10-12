@@ -5,6 +5,7 @@ import { ArticleBoard } from '../components/ArticleBoard';
 import { fetchArticles } from '@/lib/articles';
 import { getArtistBySlug } from '@/lib/artists';
 import { incrementArtistPageView } from '@/lib/metrics';
+import { SITE_CONTENT } from '@/lib/content';
 
 const PAGE_SIZE = 20;
 
@@ -27,10 +28,7 @@ export default async function ArtistPage({ params }: Props) {
     <main>
       <header className="hero hero--artist">
         <h1>{artist.name}</h1>
-        <p>Fresh Korean entertainment stories for global fans.</p>
-        <p className="disclaimer">
-          We respect the original content. Titles and summaries are rewritten, and every link sends you to the source.
-        </p>
+        <p>{SITE_CONTENT.tagline}</p>
         <nav>
           <Link href="/">← Back to all artists</Link>
         </nav>
@@ -42,11 +40,12 @@ export default async function ArtistPage({ params }: Props) {
 
       <section className="seo-blurb">
         <h2>{artist.name} news, blogs, and community updates</h2>
-        <p>
-          We translate and polish Korean-language coverage about {artist.name} from the same places domestic fans read—Korean portals (Naver, Daum), blogger recaps, and community/photo feeds like DCInside, Theqoo, Pann, and Instiz—so global supporters can skim the highlights before visiting the original story.
-        </p>
+        <p>{SITE_CONTENT.description.main}</p>
       </section>
 
+      <footer className="disclaimer">
+        <p>{SITE_CONTENT.copyright}</p>
+      </footer>
     </main>
   );
 }
