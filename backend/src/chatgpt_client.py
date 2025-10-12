@@ -39,7 +39,7 @@ class ChatGPTClient:
         "6. Treat pages as not relevant if they look like click-bait spam, fortune telling, unrelated product ads, or posts that only keyword-stuff the artist name without actual coverage."
     )
 
-    def __init__(self, *, api_key: str | None = None, model: str = "gpt-5-mini") -> None:
+    def __init__(self, *, api_key: str | None = None, model: str) -> None:
         key = api_key or os.getenv("OPENAI_API_KEY")
         if not key:
             raise ChatGPTRewriteError("OPENAI_API_KEY is not set. Add it to backend/.env.")

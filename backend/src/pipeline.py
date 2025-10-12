@@ -27,6 +27,8 @@ from .url_utils import resolve_final_url, is_url_blocked
 
 SupportedAPI = Literal["naver_news", "naver_blog", "daum"]
 
+DEFAULT_MODEL = "gpt-5-nano"
+
 
 class PipelineError(RuntimeError):
     """Raised when the fetch → rewrite pipeline fails."""
@@ -81,7 +83,7 @@ def fetch_and_rewrite(
     *,
     artist: str,
     limit: int,
-    model: str = "gpt-5-mini",
+    model: str = DEFAULT_MODEL,
 ) -> Tuple[Sequence[ArticleOriginal], Sequence[ChatGPTRewriteOutput]]:
     """Fetch articles from the chosen API and rewrite them via ChatGPT."""
 
@@ -117,7 +119,7 @@ def fetch_rewrite_and_store(
     *,
     artist: str,
     limit: int,
-    model: str = "gpt-5-mini",
+    model: str = DEFAULT_MODEL,
 ) -> list[RewriteResult]:
     """Fetch new articles, rewrite them, and persist results to the database."""
 
