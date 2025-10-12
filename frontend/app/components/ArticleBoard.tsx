@@ -81,8 +81,8 @@ export function ArticleBoard({ initialArticles, artistSlug }: ArticleBoardProps)
                         }) + ' KST'}
                   </span>
                 </div>
-                <a href={destination} target="_blank" rel="noreferrer">
-                  <h4>{article.titleRaw}</h4>
+                <a href={destination} target="_blank" rel="noreferrer" className="original-link">
+                  <h4>{article.titleRaw} <span className="external-icon">⧉</span></h4>
                 </a>
                 {article.summary ? (
                   <p>{article.summary}</p>
@@ -226,15 +226,31 @@ export function ArticleBoard({ initialArticles, artistSlug }: ArticleBoardProps)
           color: #64748b;
           border: 1px solid #e2e8f0;
         }
+        .original-link {
+          display: block;
+          text-decoration: none;
+          color: #3b82f6;
+          transition: color 0.2s ease;
+        }
+        .original-link:hover {
+          color: #1d4ed8;
+          text-decoration: underline;
+        }
         .details h4 {
           margin: 0 0 16px;
           font-size: 18px;
           font-weight: 600;
-          color: #1e293b;
+          color: inherit;
           line-height: 1.4;
         }
-        .details h4:hover {
-          color: #3b82f6;
+        .external-icon {
+          font-size: 14px;
+          color: #94a3b8;
+          margin-left: 6px;
+          transition: color 0.2s ease;
+        }
+        .original-link:hover .external-icon {
+          color: #1d4ed8;
         }
         .details p {
           margin: 0;
