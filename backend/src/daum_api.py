@@ -8,7 +8,6 @@ import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
-from urllib.parse import urlparse
 from datetime import datetime
 from html import unescape
 from typing import Any, Mapping
@@ -16,6 +15,7 @@ from typing import Any, Mapping
 import certifi
 
 from .article_models import ArticleOriginal
+from .api_utils import format_source_from_url
 
 DAUM_WEB_API_URL = "https://dapi.kakao.com/v2/search/web"
 DAUM_API_KEY_ENV = "DAUM_REST_API_KEY"
@@ -55,60 +55,7 @@ def _request_items(params: Mapping[str, Any]) -> list[dict[str, Any]]:
     return list(data.get("documents", []))
 
 
-_SINGLE_SUFFIXES = {
-    "com",
-    "net",
-    "org",
-    "kr",
-    "jp",
-    "cn",
-    "us",
-    "tv",
-}
-
-_DOUBLE_SUFFIXES = {
-    ("co", "kr"),
-    ("go", "kr"),
-    ("or", "kr"),
-    ("ne", "kr"),
-    ("re", "kr"),
-    ("pe", "kr"),
-    ("ac", "kr"),
-    ("co", "jp"),
-    ("co", "uk"),
-    ("co", "id"),
-}
-
-_HOST_PREFIX_BLACKLIST = {"www", "m", "news"}
-
-
-def _format_source_from_url(url: str, fallback: str = "Unknown") -> str:
-    if not url:
-        return fallback
-    parsed = urlparse(url)
-    host = parsed.hostname or parsed.netloc
-    if not host:
-        return fallback
-    host = host.lower()
-
-    tokens = [token for token in host.split(".") if token and token not in _HOST_PREFIX_BLACKLIST]
-    if not tokens:
-        tokens = [token for token in host.split(".") if token]
-    if not tokens:
-        return fallback
-
-    label: str
-    if len(tokens) >= 3 and (tokens[-2], tokens[-1]) in _DOUBLE_SUFFIXES:
-        label = tokens[-3]
-    elif len(tokens) >= 2 and tokens[-1] in _SINGLE_SUFFIXES:
-        label = tokens[-2]
-    else:
-        label = tokens[-1]
-
-    label = label.replace("-", " ")
-    if len(label) <= 4:
-        return label.upper()
-    return label.title()
+from urllib.parse import urlparse
 
 
 _BLOG_HOST_TOKENS = {
@@ -169,7 +116,7 @@ def fetch_daum_web(
         title = _strip_markup(str(item.get("title", "")))
         description = _strip_markup(str(item.get("contents", "")))
         category = _infer_category(url)
-        source = _format_source_from_url(url)
+        source = format_source_from_url(url)
         articles.append(
             ArticleOriginal(
                 artist=artist,

@@ -18,7 +18,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Fetch articles and rewrite them via ChatGPT.")
     parser.add_argument(
         "--api",
-        choices=["naver", "daum", "all"],
+        choices=["naver_news", "naver_blog", "daum", "all"],
         default="all",
         help="Source API to query (default: all).",
     )
@@ -55,7 +55,7 @@ def main() -> int:
     payload: list[dict] | None = None
 
     try:
-        apis = [args.api] if args.api != "all" else ["naver", "daum"]
+        apis = [args.api] if args.api != "all" else ["naver_news", "naver_blog", "daum"]
         artists = args.artist if args.artist else list_registered_artists()
 
         if args.store:

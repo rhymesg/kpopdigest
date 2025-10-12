@@ -21,10 +21,11 @@ from .db import (
     link_article_to_artist,
 )
 from .llm_models import ChatGPTRewriteOutput
-from .naver_api import fetch_naver_news
+from .naver_blog_api import fetch_naver_blog_posts
+from .naver_news_api import fetch_naver_news
 from .url_utils import resolve_final_url
 
-SupportedAPI = Literal["naver", "daum"]
+SupportedAPI = Literal["naver_news", "naver_blog", "daum"]
 
 
 class PipelineError(RuntimeError):
@@ -56,8 +57,19 @@ def _fetch_articles(
     if limit <= 0:
         return []
 
-    if api == "naver":
-        return fetch_naver_news(query, artist=definition.display_name, display=limit)[:limit]
+    if api == "naver_news":
+        return fetch_naver_news(
+            query,
+            artist=definition.display_name,
+            display=limit,
+        )[:limit]
+
+    if api == "naver_blog":
+        return fetch_naver_blog_posts(
+            query,
+            artist=definition.display_name,
+            display=limit,
+        )[:limit]
     if api == "daum":
         return fetch_daum_web(query, artist=definition.display_name, size=limit)[:limit]
 
