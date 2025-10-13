@@ -16,6 +16,7 @@ import certifi
 
 from .article_models import ArticleOriginal
 from .naver_client import request_items, strip_markup
+from .naver_blacklist import is_blog_blacklisted
 
 NAVER_BLOG_API_URL = "https://openapi.naver.com/v1/search/blog.json"
 
@@ -79,6 +80,8 @@ def fetch_naver_blog_posts(
         description = strip_markup(str(item.get("description", "")))
         original_url = str(item.get("link") or item.get("bloggerlink") or "").strip()
         if not original_url:
+            continue
+        if is_blog_blacklisted(original_url):
             continue
         source = "Naver Blog"
         articles.append(
