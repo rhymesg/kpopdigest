@@ -36,10 +36,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             </Link>
           ))}
         </nav>
-        <CategoryToggle currentCategory={category} />
       </header>
 
       <section>
+        <div className="articles-header">
+          <CategoryToggle currentCategory={category} />
+        </div>
         <ArticleBoard initialArticles={articles} category={category} />
       </section>
 

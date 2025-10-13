@@ -40,10 +40,12 @@ export default async function ArtistPage({ params, searchParams }: Props) {
         <nav>
           <Link href="/">← Back to all artists</Link>
         </nav>
-        <CategoryToggle currentCategory={category} />
       </header>
 
       <section>
+        <div className="articles-header">
+          <CategoryToggle currentCategory={category} />
+        </div>
         <ArticleBoard initialArticles={articles} artistSlug={artist.slug} category={category} />
       </section>
 

@@ -56,34 +56,43 @@ export function CategoryToggle({ currentCategory }: CategoryToggleProps) {
       <style jsx>{`
         .category-toggle {
           display: inline-flex;
-          gap: 8px;
-          margin-top: 16px;
+          gap: 4px;
           flex-wrap: wrap;
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 16px;
+          padding: 6px;
+          box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
         }
 
         .category-toggle__button {
-          border: 1px solid #cbd5f5;
-          background: #eff6ff;
-          color: #1e3a8a;
-          font-size: 12px;
+          border: none;
+          background: transparent;
+          color: #64748b;
+          font-size: 13px;
           font-weight: 600;
-          letter-spacing: 0.08em;
-          padding: 6px 14px;
-          border-radius: 9999px;
+          letter-spacing: 0.04em;
+          padding: 10px 16px;
+          border-radius: 12px;
           text-transform: uppercase;
           cursor: pointer;
           transition: all 0.2s ease;
+          position: relative;
         }
 
         .category-toggle__button:hover {
-          background: #dbeafe;
+          background: #f8fafc;
+          color: #475569;
         }
 
         .category-toggle__button.is-active {
-          background: #1d4ed8;
+          background: #3b82f6;
           color: #ffffff;
-          border-color: #1d4ed8;
-          box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.2);
+          box-shadow: 0 2px 4px 0 rgba(59, 130, 246, 0.3);
+        }
+
+        .category-toggle__button.is-active:hover {
+          background: #2563eb;
         }
       `}</style>
     </div>
