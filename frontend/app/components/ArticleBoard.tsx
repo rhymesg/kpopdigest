@@ -1,21 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import type { ArticleRow } from '@/lib/articles';
+import type { ArticleCategory } from '@/lib/categories';
 
 interface ArticleBoardProps {
   initialArticles: ArticleRow[];
   artistSlug?: string;
+  category?: ArticleCategory;
 }
 
 const PAGE_SIZE = 20;
 
-export function ArticleBoard({ initialArticles, artistSlug }: ArticleBoardProps) {
+export function ArticleBoard({ initialArticles, artistSlug, category }: ArticleBoardProps) {
   const [articles, setArticles] = useState(initialArticles);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(initialArticles.length === PAGE_SIZE);
+
+  useEffect(() => {
+    setArticles(initialArticles);
+    setHasMore(initialArticles.length === PAGE_SIZE);
+    setExpandedId(null);
+  }, [initialArticles]);
 
   const loadMore = async () => {
     if (isLoading) return;
@@ -26,6 +34,7 @@ export function ArticleBoard({ initialArticles, artistSlug }: ArticleBoardProps)
         limit: String(PAGE_SIZE),
       });
       if (artistSlug) params.set('slug', artistSlug);
+      if (category) params.set('category', category);
       const res = await fetch(`/api/articles?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to load more articles');
       const data = await res.json();

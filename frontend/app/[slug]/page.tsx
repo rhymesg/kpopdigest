@@ -2,10 +2,12 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
 import { ArticleBoard } from '../components/ArticleBoard';
+import { CategoryToggle } from '../components/CategoryToggle';
 import { fetchArticles } from '@/lib/articles';
 import { getArtistBySlug } from '@/lib/artists';
 import { incrementArtistPageView } from '@/lib/metrics';
 import { SITE_CONTENT } from '@/lib/content';
+import { normalizeCategory } from '@/lib/categories';
 
 const PAGE_SIZE = 20;
 
@@ -13,16 +15,22 @@ export const revalidate = 0;
 
 interface Props {
   params: { slug: string };
+  searchParams?: Record<string, string | string[] | undefined>;
 }
 
-export default async function ArtistPage({ params }: Props) {
+export default async function ArtistPage({ params, searchParams }: Props) {
   const artist = getArtistBySlug(params.slug);
   if (!artist) {
     notFound();
   }
 
   await incrementArtistPageView(artist.slug);
-  const articles = await fetchArticles({ limit: PAGE_SIZE, artistSlug: artist.slug });
+  const categoryParam = Array.isArray(searchParams?.category)
+    ? searchParams?.category[0]
+    : searchParams?.category;
+  const category = normalizeCategory(categoryParam);
+
+  const articles = await fetchArticles({ limit: PAGE_SIZE, artistSlug: artist.slug, category });
 
   return (
     <main>
@@ -32,10 +40,11 @@ export default async function ArtistPage({ params }: Props) {
         <nav>
           <Link href="/">← Back to all artists</Link>
         </nav>
+        <CategoryToggle currentCategory={category} />
       </header>
 
       <section>
-        <ArticleBoard initialArticles={articles} artistSlug={artist.slug} />
+        <ArticleBoard initialArticles={articles} artistSlug={artist.slug} category={category} />
       </section>
 
       <section className="seo-blurb">

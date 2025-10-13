@@ -1,3 +1,4 @@
+import type { ArticleCategory } from './categories';
 import { pool } from './db';
 
 export interface ArticleRow {
@@ -14,18 +15,26 @@ export interface ArticleRow {
   category: string;
 }
 
-export async function fetchArticles(options: {
+type FetchArticlesOptions = {
   limit: number;
   offset?: number;
   artistSlug?: string;
-}): Promise<ArticleRow[]> {
-  const { limit, offset = 0, artistSlug } = options;
+  category?: ArticleCategory;
+};
+
+export async function fetchArticles(options: FetchArticlesOptions): Promise<ArticleRow[]> {
+  const { limit, offset = 0, artistSlug, category } = options;
   const client = await pool.connect();
   try {
     const params: unknown[] = [limit, offset];
     let result;
     if (artistSlug) {
       params.push(artistSlug);
+      let whereClause = 'a."enabled" = TRUE AND ar."slug" = $3';
+      if (category) {
+        params.push(category);
+        whereClause += ` AND a."category" = $${params.length}`;
+      }
       result = await client.query(
         `
         SELECT a."id", a."title", a."titleRaw", a."summary", a."originalUrl", a."finalUrl",
@@ -33,13 +42,18 @@ export async function fetchArticles(options: {
         FROM "Article" a
         JOIN "ArticleArtist" aa ON aa."articleId" = a."id"
         JOIN "Artist" ar ON ar."id" = aa."artistId"
-        WHERE a."enabled" = TRUE AND ar."slug" = $3
+        WHERE ${whereClause}
         ORDER BY a."publishedAt" DESC
         LIMIT $1 OFFSET $2
       `,
         params,
       );
     } else {
+      let whereClause = 'a."enabled" = TRUE';
+      if (category) {
+        params.push(category);
+        whereClause += ` AND a."category" = $${params.length}`;
+      }
       result = await client.query(
         `
         SELECT a."id", a."title", a."titleRaw", a."summary", a."originalUrl", a."finalUrl",
@@ -51,7 +65,7 @@ export async function fetchArticles(options: {
                  WHERE aa."articleId" = a."id"
                ) AS "artist"
         FROM "Article" a
-        WHERE a."enabled" = TRUE
+        WHERE ${whereClause}
         ORDER BY a."publishedAt" DESC
         LIMIT $1 OFFSET $2
       `,

@@ -33,6 +33,7 @@ _HOST_PREFIX_BLACKLIST = {"www", "m", "news"}
 _SPECIAL_SOURCE_SUFFIXES = [
     ("mlbpark.donga.com", "MLBPARK"),
     ("mlbpark.com", "MLBPARK"),
+    ("pann.nate.com", "Pann"),
 ]
 
 
