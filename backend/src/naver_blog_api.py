@@ -31,19 +31,18 @@ def _parse_post_date(post_date_raw: str) -> datetime | None:
         # Parse date only (YYYYMMDD format)
         base_date = datetime.strptime(post_date_raw, "%Y%m%d").replace(tzinfo=timezone.utc)
         
-        # Get current time in KST (UTC+9)
-        kst_tz = timezone(timedelta(hours=9))
-        now_kst = datetime.now(kst_tz)
-        today_kst = now_kst.date()
+        # Get current UTC time
+        now_utc = datetime.now(timezone.utc)
+        today_utc = now_utc.date()
         post_date = base_date.date()
         
         # Set time range based on whether it's today or earlier
-        if post_date < today_kst:
+        if post_date < today_utc:
             # Previous dates: 0-23 hours
             max_hour = 23
         else:
-            # Today or future: 0 to current KST hour
-            max_hour = now_kst.hour
+            # Today: 0 to current UTC hour
+            max_hour = now_utc.hour
         
         # Add random time within the appropriate range
         random_hours = random.randint(0, max_hour)
