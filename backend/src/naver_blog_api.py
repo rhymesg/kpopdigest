@@ -20,6 +20,7 @@ from .naver_client import request_items, strip_markup
 NAVER_BLOG_API_URL = "https://openapi.naver.com/v1/search/blog.json"
 
 _SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
+_KST = timezone(timedelta(hours=9))
 
 
 class NaverBlogApiError(RuntimeError):
@@ -28,32 +29,30 @@ class NaverBlogApiError(RuntimeError):
 
 def _parse_post_date(post_date_raw: str) -> datetime | None:
     try:
-        # Parse date only (YYYYMMDD format)
-        base_date = datetime.strptime(post_date_raw, "%Y%m%d").replace(tzinfo=timezone.utc)
-        
-        # Get current UTC time
-        now_utc = datetime.now(timezone.utc)
-        today_utc = now_utc.date()
-        post_date = base_date.date()
-        
-        # Set time range based on whether it's today or earlier
-        if post_date < today_utc:
-            # Previous dates: 0-23 hours
+        base_date_local = datetime.strptime(post_date_raw, "%Y%m%d").replace(tzinfo=_KST)
+
+        now_local = datetime.now(_KST)
+        post_date = base_date_local.date()
+
+        if post_date < now_local.date():
             max_hour = 23
+        elif post_date == now_local.date():
+            max_hour = now_local.hour
         else:
-            # Today: 0 to current UTC hour
-            max_hour = now_utc.hour
-        
-        # Add random time within the appropriate range
-        random_hours = random.randint(0, max_hour)
+            # Future-dated posts should be clamped to the current local time.
+            max_hour = now_local.hour
+        random_hours = random.randint(0, max_hour if max_hour >= 0 else 0)
         random_minutes = random.randint(0, 59)
         random_seconds = random.randint(0, 59)
-        
-        parsed = base_date + timedelta(
+
+        parsed_local = base_date_local + timedelta(
             hours=random_hours,
             minutes=random_minutes,
-            seconds=random_seconds
+            seconds=random_seconds,
         )
+        if parsed_local > now_local:
+            parsed_local = now_local
+        parsed = parsed_local.astimezone(timezone.utc)
     except ValueError:
         return None
     return parsed
