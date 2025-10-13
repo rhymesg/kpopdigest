@@ -14,6 +14,11 @@ _BLOCKED_URL_PATTERNS = [
     "koreatimes.com/photonews",
     "yes24.com/product", 
     "seoul.co.kr/newsList/international",
+    "hollywoodreporter.com/t/k-pop/",
+    "imdb.com",
+    "sisopick.com",
+    "burgundycow.com",
+    "musicscore.co.kr",
 ]
 
 

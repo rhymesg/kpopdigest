@@ -30,6 +30,11 @@ _DOUBLE_SUFFIXES = {
 
 _HOST_PREFIX_BLACKLIST = {"www", "m", "news"}
 
+_SPECIAL_SOURCE_SUFFIXES = [
+    ("mlbpark.donga.com", "MLBPARK"),
+    ("mlbpark.com", "MLBPARK"),
+]
+
 
 def format_source_from_url(url: str, fallback: str = "Unknown") -> str:
     if not url:
@@ -39,6 +44,10 @@ def format_source_from_url(url: str, fallback: str = "Unknown") -> str:
     if not host:
         return fallback
     host = host.lower()
+
+    for suffix, label_override in _SPECIAL_SOURCE_SUFFIXES:
+        if host == suffix or host.endswith(f".{suffix}"):
+            return label_override
 
     tokens = [token for token in host.split(".") if token and token not in _HOST_PREFIX_BLACKLIST]
     if not tokens:

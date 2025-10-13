@@ -76,6 +76,7 @@ _COMMUNITY_HOST_TOKENS = {
     "pann",
     "inven",
     "etoland",
+    "mlbpark",
 }
 
 _VIDEO_HOST_TOKENS = {
@@ -84,10 +85,17 @@ _VIDEO_HOST_TOKENS = {
 }
 
 _NEWS_HOST_TOKENS: set[str] = set()
+_NEWS_HOST_SUFFIXES = {
+    "starnewskorea.com",
+    "news.sbs.co.kr",
+    "vogue.co.kr",
+}
 
 
 def _infer_category(url: str) -> str:
     host = urlparse(url).netloc.lower()
+    if host in _NEWS_HOST_SUFFIXES or any(host.endswith(f".{suffix}") for suffix in _NEWS_HOST_SUFFIXES):
+        return "news"
     if any(token in host for token in _BLOG_HOST_TOKENS):
         return "blog"
     if any(token in host for token in _COMMUNITY_HOST_TOKENS):
