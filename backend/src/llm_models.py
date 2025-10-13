@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from html import unescape
 import re
-from typing import TypedDict
+from typing import Sequence, TypedDict
 
 from .article_models import ArticleOriginal
 
@@ -34,13 +34,45 @@ class ChatGPTRewriteOutput(TypedDict):
     summary: str
 
 
+class ChatGPTRSSRewriteInput(TypedDict):
+    category: str
+    source: str
+    titleOriginal: str
+    description: str
+    candidateArtists: list[str]
+
+
+class ChatGPTRSSRewriteOutput(TypedDict):
+    relevant: bool
+    titleRaw: str
+    title: str
+    summary: str
+    artists: list[str]
+
+
 def build_rewrite_input(article: ArticleOriginal) -> ChatGPTRewriteInput:
     """Convert an ArticleOriginal into the payload shape expected by ChatGPT."""
 
     return {
-        "artist": article.artist,
+        "artist": article.artist or "",
         "category": article.category,
         "source": article.source,
         "titleOriginal": _strip_markup(article.title_original),
         "description": _strip_markup(article.description),
+    }
+
+
+def build_rss_rewrite_input(
+    article: ArticleOriginal, candidate_artists: Sequence[str]
+) -> ChatGPTRSSRewriteInput:
+    """Convert an ArticleOriginal into the payload for RSS-based rewrites."""
+
+    artists = [name.strip() for name in candidate_artists if name and name.strip()]
+
+    return {
+        "category": article.category,
+        "source": article.source,
+        "titleOriginal": _strip_markup(article.title_original),
+        "description": _strip_markup(article.description),
+        "candidateArtists": artists,
     }

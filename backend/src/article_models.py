@@ -10,7 +10,7 @@ from datetime import datetime
 class ArticleOriginal:
     """Raw article metadata as returned by an upstream provider."""
 
-    artist: str
+    artist: str | None
     original_url: str
     title_original: str
     description: str
