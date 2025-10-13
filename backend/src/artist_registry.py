@@ -21,6 +21,10 @@ REGISTERED_ARTISTS: List[ArtistDefinition] = [
     ArtistDefinition(slug="babymonster", display_name="BABYMONSTER", search_query="베이비몬스터,BABYMONSTER"),
     ArtistDefinition(slug="newjeans", display_name="NewJeans", search_query="뉴진스,NewJeans"),
     ArtistDefinition(slug="enhypen", display_name="ENHYPEN", search_query="엔하이픈,ENHYPEN"),
+    ArtistDefinition(slug="twice", display_name="TWICE", search_query="twice,트와이스"),
+    ArtistDefinition(slug="seventeen", display_name="Seventeen", search_query="seventeen,세븐틴"),
+    ArtistDefinition(slug="tresure", display_name="TRESURE", search_query="tresure,트레저"),
+    ArtistDefinition(slug="i-dle", display_name="i-dle", search_query="i-dle,아이들"),
 ]
 
 

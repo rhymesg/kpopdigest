@@ -19,6 +19,7 @@ _BLOCKED_URL_PATTERNS = [
     "sisopick.com",
     "burgundycow.com",
     "musicscore.co.kr",
+    "music.apple.com",
 ]
 
 

@@ -18,6 +18,10 @@ const DEFINITIONS: ArtistDefinition[] = [
   { slug: 'babymonster', name: 'BABYMONSTER' },
   { slug: 'newjeans', name: 'NewJeans' },
   { slug: 'enhypen', name: 'ENHYPEN' },
+  { slug: 'twice', name: 'TWICE' },
+  { slug: 'seventeen', name: 'Seventeen' },
+  { slug: 'tresure', name: 'TRESURE' },
+  { slug: 'i-dle', name: 'i-dle' },
 ];
 
 export function getArtistDefinitions(): ArtistDefinition[] {
