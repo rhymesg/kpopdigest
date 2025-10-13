@@ -84,6 +84,7 @@ def main() -> int:
         api=args.api,
         category=args.category,
         source=args.source,
+        source_language="ko",
     )
 
     try:

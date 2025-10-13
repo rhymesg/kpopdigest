@@ -47,6 +47,7 @@ def ensure_schema(conn: psycopg.Connection) -> None:
             "api" TEXT NOT NULL,
             "category" TEXT NOT NULL,
             "source" TEXT NOT NULL,
+            "sourceLanguage" TEXT NOT NULL DEFAULT 'ko',
             "summary" TEXT,
             "viewCount" INTEGER NOT NULL DEFAULT 0,
             "externalClickCount" INTEGER NOT NULL DEFAULT 0,
@@ -85,6 +86,18 @@ def ensure_schema(conn: psycopg.Connection) -> None:
     with conn.cursor() as cur:
         for ddl in ddl_statements:
             cur.execute(ddl)
+        cur.execute(
+            'ALTER TABLE "Article" ADD COLUMN IF NOT EXISTS "sourceLanguage" TEXT'
+        )
+        cur.execute(
+            "ALTER TABLE \"Article\" ALTER COLUMN \"sourceLanguage\" SET DEFAULT 'ko'"
+        )
+        cur.execute(
+            "UPDATE \"Article\" SET \"sourceLanguage\" = 'ko' WHERE \"sourceLanguage\" IS NULL"
+        )
+        cur.execute(
+            'ALTER TABLE "Article" ALTER COLUMN "sourceLanguage" SET NOT NULL'
+        )
     conn.commit()
 
 

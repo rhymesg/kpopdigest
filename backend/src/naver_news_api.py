@@ -70,6 +70,7 @@ def fetch_naver_news(
                 api="naver_news",
                 category="news",
                 source=source,
+                source_language="ko",
             )
         )
     return articles

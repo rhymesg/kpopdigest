@@ -91,25 +91,39 @@ class ChatGPTClient:
         except json.JSONDecodeError as exc:  # pragma: no cover - invalid model output
             raise ChatGPTRewriteError("OpenAI response was not valid JSON.") from exc
 
-        missing = [key for key in ("relevant", "titleRaw", "title", "summary") if key not in parsed]
+        missing = [key for key in ("titleRaw", "title", "summary") if key not in parsed]
         if missing:
             raise ChatGPTRewriteError(
                 f"OpenAI response missing required fields: {', '.join(missing)}"
             )
 
-        relevant_raw = parsed["relevant"]
+        relevant_present = "relevant" in parsed
+        relevant_raw = parsed.get("relevant")
         if isinstance(relevant_raw, str):
             relevant = relevant_raw.strip().lower() in {"true", "yes", "1"}
         else:
-            relevant = bool(relevant_raw)
+            relevant = bool(relevant_raw) if relevant_present else None
+
+        title_raw = str(parsed.get("titleRaw") or "")
+        title = str(parsed.get("title") or "")
+        summary = str(parsed.get("summary") or "")
+
+        if relevant is None:
+            print(
+                f"[chatgpt] Warning: 'relevant' missing in rewrite response for {article.original_url}.",
+                "Inferring from content.",
+                flush=True,
+            )
+            has_content = bool(title.strip() or summary.strip())
+            relevant = has_content
 
         return cast(
             ChatGPTRewriteOutput,
             {
                 "relevant": relevant,
-                "titleRaw": str(parsed["titleRaw"]),
-                "title": str(parsed["title"]),
-                "summary": str(parsed["summary"]),
+                "titleRaw": title_raw,
+                "title": title,
+                "summary": summary,
             },
         )
 
@@ -143,7 +157,7 @@ class ChatGPTClient:
 
         missing = [
             key
-            for key in ("relevant", "titleRaw", "title", "summary", "artists")
+            for key in ("titleRaw", "title", "summary", "artists")
             if key not in parsed
         ]
         if missing:
@@ -151,11 +165,12 @@ class ChatGPTClient:
                 f"OpenAI response missing required fields: {', '.join(missing)}"
             )
 
-        relevant_raw = parsed["relevant"]
+        relevant_present = "relevant" in parsed
+        relevant_raw = parsed.get("relevant")
         if isinstance(relevant_raw, str):
             relevant = relevant_raw.strip().lower() in {"true", "yes", "1"}
         else:
-            relevant = bool(relevant_raw)
+            relevant = bool(relevant_raw) if relevant_present else None
 
         artists_raw = parsed["artists"]
         if isinstance(artists_raw, str):
@@ -180,6 +195,21 @@ class ChatGPTClient:
             seen.add(key)
             artists.append(mapped)
 
+        if relevant_present is False:
+            print(
+                f"[chatgpt] Warning: 'relevant' missing in RSS rewrite response for {article.original_url}.",
+                "Inferring from content.",
+                flush=True,
+            )
+
+        title_raw = str(parsed.get("titleRaw") or "")
+        title = str(parsed.get("title") or "")
+        summary = str(parsed.get("summary") or "")
+
+        if relevant is None:
+            has_content = bool(artists or title.strip() or summary.strip())
+            relevant = has_content
+
         if relevant and not artists:
             # Model marked the article as relevant but failed to map artists to the registry.
             raise ChatGPTRewriteError(
@@ -190,9 +220,9 @@ class ChatGPTClient:
             ChatGPTRSSRewriteOutput,
             {
                 "relevant": relevant,
-                "titleRaw": str(parsed["titleRaw"]),
-                "title": str(parsed["title"]),
-                "summary": str(parsed["summary"]),
+                "titleRaw": title_raw,
+                "title": title,
+                "summary": summary,
                 "artists": artists if relevant else [],
             },
         )

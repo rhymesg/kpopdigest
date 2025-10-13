@@ -18,3 +18,4 @@ class ArticleOriginal:
     api: str
     category: str
     source: str
+    source_language: str

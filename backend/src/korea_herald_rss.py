@@ -83,6 +83,7 @@ def fetch_korea_herald_rss(*, limit: int | None = None) -> list[ArticleOriginal]
                 api="korea_herald_rss",
                 category="news",
                 source=source,
+                source_language="en",
             )
         )
 

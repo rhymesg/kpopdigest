@@ -133,6 +133,7 @@ def fetch_daum_web(
                 api="daum",
                 category=category,
                 source=source,
+                source_language="ko",
             )
         )
     return articles

@@ -92,6 +92,7 @@ def fetch_naver_blog_posts(
                 api="naver_blog",
                 category="blog",
                 source=source,
+                source_language="ko",
             )
         )
     return articles

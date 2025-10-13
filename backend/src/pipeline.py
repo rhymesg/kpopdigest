@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import uuid
-from typing import Literal, Sequence, Tuple
+from typing import Any, Literal, Mapping, Sequence, Tuple
 
 import psycopg
 
@@ -46,6 +46,115 @@ class RewriteResult:
 class RSSRewriteResult:
     article: ArticleOriginal
     rewrite: ChatGPTRSSRewriteOutput
+
+
+def _find_existing_article_id(
+    conn: psycopg.Connection, urls: Sequence[str]
+) -> str | None:
+    with conn.cursor() as cur:
+        cur.execute(
+            'SELECT "id" FROM "Article" WHERE "originalUrl" = ANY(%s) OR "finalUrl" = ANY(%s) LIMIT 1',
+            (urls, urls),
+        )
+        row = cur.fetchone()
+    return row[0] if row else None
+
+
+def _insert_article_record(
+    conn: psycopg.Connection,
+    *,
+    article: ArticleOriginal,
+    rewrite: Mapping[str, Any],
+    final_url_to_store: str | None,
+    enabled: bool,
+    now: datetime,
+) -> str:
+    article_id = uuid.uuid4().hex
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO "Article" (
+                "id",
+                "enabled",
+                "originalUrl",
+                "finalUrl",
+                "title",
+                "titleRaw",
+                "publishedAt",
+                "api",
+                "category",
+                "source",
+                "sourceLanguage",
+                "summary",
+                "viewCount",
+                "externalClickCount",
+                "createdAt",
+                "updatedAt"
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            )
+            """,
+            (
+                article_id,
+                enabled,
+                article.original_url,
+                final_url_to_store,
+                rewrite.get("title") or None,
+                rewrite["titleRaw"],
+                article.published_at,
+                article.api,
+                article.category,
+                article.source,
+                article.source_language,
+                rewrite.get("summary") or None,
+                0,
+                0,
+                now,
+                now,
+            ),
+        )
+    return article_id
+
+
+def _link_article_to_definitions(
+    conn: psycopg.Connection,
+    *,
+    article_id: str,
+    definitions: Sequence[ArtistDefinition],
+) -> int:
+    created_total = 0
+    for definition in definitions:
+        artist_id = get_or_create_artist(
+            conn,
+            name=definition.display_name,
+            slug=definition.slug,
+        )
+        if link_article_to_artist(conn, article_id=article_id, artist_id=artist_id):
+            created_total += 1
+    return created_total
+
+
+def _evaluate_rewrite(
+    *,
+    rewrite: Mapping[str, Any],
+    is_alive: bool,
+    is_blocked: bool,
+) -> tuple[bool, str | None]:
+    disabled_reason: str | None = None
+    relevant_flag = bool(rewrite.get("relevant"))
+    title_has_text = bool(str(rewrite.get("title") or "").strip())
+
+    if not relevant_flag:
+        disabled_reason = "irrelevant"
+    elif not title_has_text:
+        print(
+            "[pipeline]    -> Warning: relevant response missing title; disabling article.",
+            flush=True,
+        )
+        disabled_reason = "empty_title"
+
+    enabled = relevant_flag and title_has_text and is_alive and not is_blocked
+    return enabled, disabled_reason
 
 
 def _resolve_artist(artist: str) -> ArtistDefinition:
@@ -160,6 +269,8 @@ def fetch_rewrite_and_store(
             linked_existing = 0
             enabled_count = 0
 
+            print(f"[pipeline] Running rewrites with model '{model}'...")
+
             for index, article in enumerate(articles[:limit], start=1):
                 preview = article.title_original[:60]
                 print(f"[pipeline] ({index}/{total}) Checking {article.source} | {preview}")
@@ -172,23 +283,14 @@ def fetch_rewrite_and_store(
                 if final_url:
                     urls_to_check.append(final_url)
 
-                with conn.cursor() as cur:
-                    cur.execute(
-                        'SELECT "id" FROM "Article" WHERE "originalUrl" = ANY(%s) OR "finalUrl" = ANY(%s) LIMIT 1',
-                        (urls_to_check, urls_to_check),
-                    )
-                    row = cur.fetchone()
+                existing_article_id = _find_existing_article_id(conn, urls_to_check)
 
-                if row:
-                    article_id = row[0]
+                if existing_article_id:
                     try:
-                        artist_id = get_or_create_artist(
+                        created = _link_article_to_definitions(
                             conn,
-                            name=definition.display_name,
-                            slug=definition.slug,
-                        )
-                        created = link_article_to_artist(
-                            conn, article_id=article_id, artist_id=artist_id
+                            article_id=existing_article_id,
+                            definitions=[definition],
                         )
                         conn.commit()
                     except psycopg.Error as exc:
@@ -205,11 +307,10 @@ def fetch_rewrite_and_store(
                 if not is_alive:
                     disabled_reason = "unreachable"
 
-                # Check if URL is blocked
                 urls_to_check_for_blocking = [article.original_url]
                 if final_url:
                     urls_to_check_for_blocking.append(final_url)
-                
+
                 is_blocked = any(is_url_blocked(url) for url in urls_to_check_for_blocking)
                 if is_blocked:
                     disabled_reason = disabled_reason or "blocked_url_pattern"
@@ -223,61 +324,27 @@ def fetch_rewrite_and_store(
                     )
                     continue
 
-                if not rewrite["relevant"]:
-                    disabled_reason = disabled_reason or "irrelevant"
-
-                enabled = bool(rewrite["relevant"]) and is_alive and not is_blocked
+                enabled, evaluation_reason = _evaluate_rewrite(
+                    rewrite=rewrite,
+                    is_alive=is_alive,
+                    is_blocked=is_blocked,
+                )
+                if evaluation_reason:
+                    disabled_reason = disabled_reason or evaluation_reason
                 now = datetime.now(timezone.utc)
                 try:
-                    article_id = uuid.uuid4().hex
-                    with conn.cursor() as cur:
-                        cur.execute(
-                            """
-                            INSERT INTO "Article" (
-                                "id",
-                                "enabled",
-                                "originalUrl",
-                                "finalUrl",
-                                "title",
-                                "titleRaw",
-                                "publishedAt",
-                                "api",
-                                "category",
-                                "source",
-                                "summary",
-                                "viewCount",
-                                "externalClickCount",
-                                "createdAt",
-                                "updatedAt"
-                            ) VALUES (
-                                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-                            )
-                            """,
-                            (
-                                article_id,
-                                enabled,
-                                article.original_url,
-                                final_url_to_store,
-                                rewrite["title"] or None,
-                                rewrite["titleRaw"],
-                                article.published_at,
-                                article.api,
-                                article.category,
-                                article.source,
-                                rewrite["summary"] or None,
-                                0,
-                                0,
-                                now,
-                                now,
-                            ),
-                        )
-                    artist_id = get_or_create_artist(
+                    article_id = _insert_article_record(
                         conn,
-                        name=definition.display_name,
-                        slug=definition.slug,
+                        article=article,
+                        rewrite=rewrite,
+                        final_url_to_store=final_url_to_store,
+                        enabled=enabled,
+                        now=now,
                     )
-                    link_article_to_artist(
-                        conn, article_id=article_id, artist_id=artist_id
+                    _link_article_to_definitions(
+                        conn,
+                        article_id=article_id,
+                        definitions=[definition],
                     )
                     conn.commit()
                 except psycopg.Error as exc:
@@ -365,6 +432,8 @@ def fetch_rss_rewrite_and_store(
             linked_existing = 0
             enabled_count = 0
 
+            print(f"[pipeline] Running RSS rewrites with model '{model}'...")
+
             for index, article in enumerate(articles[:limit], start=1):
                 preview = article.title_original[:60]
                 print(f"[pipeline] ({index}/{total}) Checking {article.source} | {preview}")
@@ -378,14 +447,7 @@ def fetch_rss_rewrite_and_store(
                     urls_to_check.append(final_url)
 
                 existing_article_id: str | None = None
-                with conn.cursor() as cur:
-                    cur.execute(
-                        'SELECT "id" FROM "Article" WHERE "originalUrl" = ANY(%s) OR "finalUrl" = ANY(%s) LIMIT 1',
-                        (urls_to_check, urls_to_check),
-                    )
-                    row = cur.fetchone()
-                    if row:
-                        existing_article_id = row[0]
+                existing_article_id = _find_existing_article_id(conn, urls_to_check)
 
                 try:
                     rewrite = client.rewrite_rss(
@@ -417,25 +479,24 @@ def fetch_rss_rewrite_and_store(
                 if is_blocked:
                     disabled_reason = disabled_reason or "blocked_url_pattern"
 
-                if not rewrite["relevant"]:
-                    disabled_reason = disabled_reason or "irrelevant"
+                enabled, evaluation_reason = _evaluate_rewrite(
+                    rewrite=rewrite,
+                    is_alive=is_alive,
+                    is_blocked=is_blocked,
+                )
+                if evaluation_reason:
+                    disabled_reason = disabled_reason or evaluation_reason
 
                 if existing_article_id:
                     created_links = 0
-                    performed_work = False
                     try:
-                        for definition in artist_definitions:
-                            artist_id = get_or_create_artist(
+                        if artist_definitions:
+                            created_links = _link_article_to_definitions(
                                 conn,
-                                name=definition.display_name,
-                                slug=definition.slug,
+                                article_id=existing_article_id,
+                                definitions=artist_definitions,
                             )
-                            performed_work = True
-                            if link_article_to_artist(
-                                conn, article_id=existing_article_id, artist_id=artist_id
-                            ):
-                                created_links += 1
-                        if performed_work:
+                        if artist_definitions:
                             conn.commit()
                         if created_links:
                             linked_existing += 1
@@ -449,60 +510,23 @@ def fetch_rss_rewrite_and_store(
                         ) from exc
                     continue
 
-                enabled = bool(rewrite["relevant"]) and is_alive and not is_blocked
+                enabled = enabled
                 now = datetime.now(timezone.utc)
                 try:
-                    article_id = uuid.uuid4().hex
-                    with conn.cursor() as cur:
-                        cur.execute(
-                            """
-                            INSERT INTO "Article" (
-                                "id",
-                                "enabled",
-                                "originalUrl",
-                                "finalUrl",
-                                "title",
-                                "titleRaw",
-                                "publishedAt",
-                                "api",
-                                "category",
-                                "source",
-                                "summary",
-                                "viewCount",
-                                "externalClickCount",
-                                "createdAt",
-                                "updatedAt"
-                            ) VALUES (
-                                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-                            )
-                            """,
-                            (
-                                article_id,
-                                enabled,
-                                article.original_url,
-                                final_url_to_store,
-                                rewrite["title"] or None,
-                                rewrite["titleRaw"],
-                                article.published_at,
-                                article.api,
-                                article.category,
-                                article.source,
-                                rewrite["summary"] or None,
-                                0,
-                                0,
-                                now,
-                                now,
-                            ),
-                        )
+                    article_id = _insert_article_record(
+                        conn,
+                        article=article,
+                        rewrite=rewrite,
+                        final_url_to_store=final_url_to_store,
+                        enabled=enabled,
+                        now=now,
+                    )
 
-                    for definition in artist_definitions:
-                        artist_id = get_or_create_artist(
+                    if artist_definitions:
+                        _link_article_to_definitions(
                             conn,
-                            name=definition.display_name,
-                            slug=definition.slug,
-                        )
-                        link_article_to_artist(
-                            conn, article_id=article_id, artist_id=artist_id
+                            article_id=article_id,
+                            definitions=artist_definitions,
                         )
 
                     conn.commit()
