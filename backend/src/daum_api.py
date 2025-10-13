@@ -93,16 +93,29 @@ _NEWS_HOST_SUFFIXES = {
 
 
 def _infer_category(url: str) -> str:
-    host = urlparse(url).netloc.lower()
+    parsed = urlparse(url)
+    host = parsed.netloc.lower()
+    path = parsed.path.lower()
+
+    if "news" in host:
+        return "news"
+
+    if path.startswith("/news"):
+        return "news"
+
     if host in _NEWS_HOST_SUFFIXES or any(host.endswith(f".{suffix}") for suffix in _NEWS_HOST_SUFFIXES):
         return "news"
+    if "blog" in host:
+        return "blog"
+    if path.startswith("/blog"):
+        return "blog"
     if any(token in host for token in _BLOG_HOST_TOKENS):
         return "blog"
     if any(token in host for token in _COMMUNITY_HOST_TOKENS):
         return "community"
     if any(token in host for token in _NEWS_HOST_TOKENS):
         return "news"
-    return "etc"
+    return "community"
 
 
 def fetch_daum_web(
