@@ -9,11 +9,12 @@ interface ArticleBoardProps {
   initialArticles: ArticleRow[];
   artistSlug?: string;
   category?: ArticleCategory;
+  search?: string;
 }
 
 const PAGE_SIZE = 20;
 
-export function ArticleBoard({ initialArticles, artistSlug, category }: ArticleBoardProps) {
+export function ArticleBoard({ initialArticles, artistSlug, category, search }: ArticleBoardProps) {
   const [articles, setArticles] = useState(initialArticles);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -35,6 +36,7 @@ export function ArticleBoard({ initialArticles, artistSlug, category }: ArticleB
       });
       if (artistSlug) params.set('slug', artistSlug);
       if (category) params.set('category', category);
+      if (search) params.set('search', search);
       const res = await fetch(`/api/articles?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to load more articles');
       const data = await res.json();

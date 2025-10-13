@@ -11,12 +11,15 @@ export async function GET(req: NextRequest) {
   const limit = Number(searchParams.get('limit') ?? DEFAULT_LIMIT);
   const slug = searchParams.get('slug') ?? undefined;
   const category = normalizeCategory(searchParams.get('category'));
+  const searchRaw = searchParams.get('search');
+  const search = searchRaw && searchRaw.trim() ? searchRaw.trim() : undefined;
 
   const articles = await fetchArticles({
     limit,
     offset,
     artistSlug: slug,
     category,
+    search,
   });
 
   return NextResponse.json({

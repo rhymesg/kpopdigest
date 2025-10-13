@@ -20,10 +20,11 @@ type FetchArticlesOptions = {
   offset?: number;
   artistSlug?: string;
   category?: ArticleCategory;
+  search?: string;
 };
 
 export async function fetchArticles(options: FetchArticlesOptions): Promise<ArticleRow[]> {
-  const { limit, offset = 0, artistSlug, category } = options;
+  const { limit, offset = 0, artistSlug, category, search } = options;
   const client = await pool.connect();
   try {
     const params: unknown[] = [limit, offset];
@@ -34,6 +35,15 @@ export async function fetchArticles(options: FetchArticlesOptions): Promise<Arti
       if (category) {
         params.push(category);
         whereClause += ` AND a."category" = $${params.length}`;
+      }
+      if (search) {
+        params.push(`%${search}%`);
+        whereClause += (
+          ` AND (a."title" ILIKE $${params.length}` +
+          ` OR a."titleRaw" ILIKE $${params.length}` +
+          ` OR a."summary" ILIKE $${params.length}` +
+          ` OR a."source" ILIKE $${params.length})`
+        );
       }
       result = await client.query(
         `
@@ -53,6 +63,15 @@ export async function fetchArticles(options: FetchArticlesOptions): Promise<Arti
       if (category) {
         params.push(category);
         whereClause += ` AND a."category" = $${params.length}`;
+      }
+      if (search) {
+        params.push(`%${search}%`);
+        whereClause += (
+          ` AND (a."title" ILIKE $${params.length}` +
+          ` OR a."titleRaw" ILIKE $${params.length}` +
+          ` OR a."summary" ILIKE $${params.length}` +
+          ` OR a."source" ILIKE $${params.length})`
+        );
       }
       result = await client.query(
         `

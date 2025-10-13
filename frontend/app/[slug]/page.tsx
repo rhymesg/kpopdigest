@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
 import { ArticleBoard } from '../components/ArticleBoard';
-import { CategoryToggle } from '../components/CategoryToggle';
+import { ArticleFilters } from '../components/ArticleFilters';
 import { fetchArticles } from '@/lib/articles';
 import { getArtistBySlug } from '@/lib/artists';
 import { incrementArtistPageView } from '@/lib/metrics';
@@ -29,8 +29,17 @@ export default async function ArtistPage({ params, searchParams }: Props) {
     ? searchParams?.category[0]
     : searchParams?.category;
   const category = normalizeCategory(categoryParam);
+  const searchParam = Array.isArray(searchParams?.search)
+    ? searchParams?.search[0]
+    : searchParams?.search;
+  const search = searchParam?.trim() ? searchParam.trim() : undefined;
 
-  const articles = await fetchArticles({ limit: PAGE_SIZE, artistSlug: artist.slug, category });
+  const articles = await fetchArticles({
+    limit: PAGE_SIZE,
+    artistSlug: artist.slug,
+    category,
+    search,
+  });
 
   return (
     <main>
@@ -44,9 +53,14 @@ export default async function ArtistPage({ params, searchParams }: Props) {
 
       <section>
         <div className="articles-header">
-          <CategoryToggle currentCategory={category} />
+          <ArticleFilters currentCategory={category} currentSearch={search} />
         </div>
-        <ArticleBoard initialArticles={articles} artistSlug={artist.slug} category={category} />
+        <ArticleBoard
+          initialArticles={articles}
+          artistSlug={artist.slug}
+          category={category}
+          search={search}
+        />
       </section>
 
       <section className="seo-blurb">

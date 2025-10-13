@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 import { ArticleBoard } from './components/ArticleBoard';
-import { CategoryToggle } from './components/CategoryToggle';
+import { ArticleFilters } from './components/ArticleFilters';
 import { fetchArticles } from '@/lib/articles';
 import { fetchArtistsByViews } from '@/lib/artists';
 import { SITE_CONTENT } from '@/lib/content';
@@ -20,8 +20,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     ? searchParams?.category[0]
     : searchParams?.category;
   const category = normalizeCategory(categoryParam);
+  const searchParam = Array.isArray(searchParams?.search)
+    ? searchParams?.search[0]
+    : searchParams?.search;
+  const search = searchParam?.trim() ? searchParam.trim() : undefined;
 
-  const articles = await fetchArticles({ limit: PAGE_SIZE, category });
+  const articles = await fetchArticles({ limit: PAGE_SIZE, category, search });
   const artists = await fetchArtistsByViews();
 
   return (
@@ -40,9 +44,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
       <section>
         <div className="articles-header">
-          <CategoryToggle currentCategory={category} />
+          <ArticleFilters currentCategory={category} currentSearch={search} />
         </div>
-        <ArticleBoard initialArticles={articles} category={category} />
+        <ArticleBoard initialArticles={articles} category={category} search={search} />
       </section>
 
       <section className="seo-blurb">
