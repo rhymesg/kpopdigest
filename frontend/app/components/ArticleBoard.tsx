@@ -118,6 +118,7 @@ export function ArticleBoard({ initialArticles, artistSlug, category, search }: 
           display: flex;
           flex-direction: column;
           gap: 16px;
+          margin-top: 16px;
         }
         .card {
           background: #ffffff;

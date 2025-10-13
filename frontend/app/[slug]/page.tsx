@@ -1,8 +1,7 @@
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
-
 import { ArticleBoard } from '../components/ArticleBoard';
 import { ArticleFilters } from '../components/ArticleFilters';
+import Link from 'next/link';
 import { fetchArticles } from '@/lib/articles';
 import { getArtistBySlug } from '@/lib/artists';
 import { incrementArtistPageView } from '@/lib/metrics';
@@ -52,9 +51,7 @@ export default async function ArtistPage({ params, searchParams }: Props) {
       </header>
 
       <section>
-        <div className="articles-header">
-          <ArticleFilters currentCategory={category} currentSearch={search} />
-        </div>
+        <ArticleFilters currentCategory={category} currentSearch={search} />
         <ArticleBoard
           initialArticles={articles}
           artistSlug={artist.slug}
@@ -74,3 +71,5 @@ export default async function ArtistPage({ params, searchParams }: Props) {
     </main>
   );
 }
+
+const styles = '';

@@ -33,7 +33,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       <header className="hero">
         <h1>K-pop Digest</h1>
         <p>{SITE_CONTENT.tagline}</p>
-        <nav>
+        <nav className="hero-nav">
           {artists.map((artist) => (
             <Link key={artist.slug} href={`/${artist.slug}`}>
               {artist.name}
@@ -43,9 +43,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       </header>
 
       <section>
-        <div className="articles-header">
-          <ArticleFilters currentCategory={category} currentSearch={search} />
-        </div>
+        <ArticleFilters currentCategory={category} currentSearch={search} />
         <ArticleBoard initialArticles={articles} category={category} search={search} />
       </section>
 
