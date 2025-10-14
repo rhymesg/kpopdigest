@@ -67,6 +67,15 @@ export default async function ArtistPage({ params, searchParams }: Props) {
 
       <footer className="disclaimer">
         <p>{SITE_CONTENT.copyright}</p>
+        <div className="feedback-section">
+          <span className="feedback-text">Any comment, feedback, or request?</span>
+          <a className="feedback-button" href="mailto:contact@kpopdigest.com" target="_blank" rel="noopener noreferrer" aria-label="Send email">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <polyline points="22,6 12,13 2,6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </a>
+        </div>
       </footer>
     </main>
   );
