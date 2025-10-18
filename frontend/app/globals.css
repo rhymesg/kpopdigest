@@ -28,7 +28,7 @@ main {
 }
 
 .hero h1 {
-  margin: 0;
+  margin: 0 0 24px;
   font-size: 2.75rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
