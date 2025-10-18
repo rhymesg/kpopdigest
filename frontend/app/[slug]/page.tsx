@@ -44,7 +44,6 @@ export default async function ArtistPage({ params, searchParams }: Props) {
     <main>
       <header className="hero hero--artist">
         <h1>{artist.name}</h1>
-        <p>{SITE_CONTENT.tagline}</p>
         <nav>
           <Link href="/">← Back to all artists</Link>
         </nav>
