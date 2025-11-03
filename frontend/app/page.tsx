@@ -6,8 +6,7 @@ import { fetchArticles } from '@/lib/articles';
 import { fetchArtistsByViews } from '@/lib/artists';
 import { SITE_CONTENT } from '@/lib/content';
 import { normalizeCategory } from '@/lib/categories';
-
-const PAGE_SIZE = 20;
+import { DEFAULT_PAGE_SIZE } from '@/lib/constants';
 
 export const revalidate = 0;
 
@@ -25,7 +24,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     : searchParams?.search;
   const search = searchParam?.trim() ? searchParam.trim() : undefined;
 
-  const articles = await fetchArticles({ limit: PAGE_SIZE, category, search });
+  const articles = await fetchArticles({ limit: DEFAULT_PAGE_SIZE, category, search });
   const artists = await fetchArtistsByViews();
 
   return (

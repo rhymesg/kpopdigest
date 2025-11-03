@@ -7,8 +7,7 @@ import { getArtistBySlug } from '@/lib/artists';
 import { incrementArtistPageView } from '@/lib/metrics';
 import { SITE_CONTENT } from '@/lib/content';
 import { normalizeCategory } from '@/lib/categories';
-
-const PAGE_SIZE = 20;
+import { DEFAULT_PAGE_SIZE } from '@/lib/constants';
 
 export const revalidate = 0;
 
@@ -34,7 +33,7 @@ export default async function ArtistPage({ params, searchParams }: Props) {
   const search = searchParam?.trim() ? searchParam.trim() : undefined;
 
   const articles = await fetchArticles({
-    limit: PAGE_SIZE,
+    limit: DEFAULT_PAGE_SIZE,
     artistSlug: artist.slug,
     category,
     search,

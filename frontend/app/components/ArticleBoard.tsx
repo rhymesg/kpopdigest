@@ -5,6 +5,7 @@ import Script from 'next/script';
 
 import type { ArticleRow } from '@/lib/articles';
 import type { ArticleCategory } from '@/lib/categories';
+import { DEFAULT_PAGE_SIZE } from '@/lib/constants';
 
 declare global {
   interface Window {
@@ -18,8 +19,6 @@ interface ArticleBoardProps {
   category?: ArticleCategory;
   search?: string;
 }
-
-const PAGE_SIZE = 20;
 
 const pushAds = () => {
   if (typeof window === 'undefined') return;
@@ -37,11 +36,11 @@ export function ArticleBoard({ initialArticles, artistSlug, category, search }: 
   const [articles, setArticles] = useState(initialArticles);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(initialArticles.length === PAGE_SIZE);
+  const [hasMore, setHasMore] = useState(initialArticles.length === DEFAULT_PAGE_SIZE);
 
   useEffect(() => {
     setArticles(initialArticles);
-    setHasMore(initialArticles.length === PAGE_SIZE);
+    setHasMore(initialArticles.length === DEFAULT_PAGE_SIZE);
     setExpandedId(null);
   }, [initialArticles]);
 
@@ -61,7 +60,7 @@ export function ArticleBoard({ initialArticles, artistSlug, category, search }: 
     try {
       const params = new URLSearchParams({
         offset: String(articles.length),
-        limit: String(PAGE_SIZE),
+        limit: String(DEFAULT_PAGE_SIZE),
       });
       if (artistSlug) params.set('slug', artistSlug);
       if (category) params.set('category', category);
