@@ -23,11 +23,14 @@ const PAGE_SIZE = 20;
 
 const pushAds = () => {
   if (typeof window === 'undefined') return;
-  try {
-    (window.adsbygoogle = window.adsbygoogle || []).push({});
-  } catch (error) {
-    console.error('adsbygoogle push failed', error);
-  }
+  const pendingSlots = document.querySelectorAll('ins.adsbygoogle:not([data-adsbygoogle-status])');
+  pendingSlots.forEach(() => {
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch (error) {
+      console.error('adsbygoogle push failed', error);
+    }
+  });
 };
 
 export function ArticleBoard({ initialArticles, artistSlug, category, search }: ArticleBoardProps) {
@@ -324,14 +327,14 @@ export function ArticleBoard({ initialArticles, artistSlug, category, search }: 
             color: #475569;
           }
           .ad-container {
-            margin: 24px auto 0;
+            margin: 16px auto 0;
             width: 100%;
           }
           .ad-container__inline {
             margin-top: 20px;
           }
           .load-more {
-            margin: 32px auto 0;
+            margin: 20px auto 0;
             display: inline-flex;
             padding: 14px 28px;
             border-radius: 12px;
