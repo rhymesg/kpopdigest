@@ -264,7 +264,7 @@ export function ArticleBoard({ initialArticles, artistSlug, category, search }: 
             font-weight: 500;
           }
           .details {
-            padding: 20px 24px 24px;
+            padding: 20px 24px 16px;
             border-top: 1px solid #e2e8f0;
             background: #f8fafc;
           }
@@ -328,9 +328,16 @@ export function ArticleBoard({ initialArticles, artistSlug, category, search }: 
           .ad-container {
             margin: 16px auto 0;
             width: 100%;
+            line-height: 0;
           }
           .ad-container__inline {
-            margin-top: 20px;
+            margin-top: 16px;
+            line-height: 0;
+          }
+          :global(.ad-container .adsbygoogle),
+          :global(.ad-container__inline .adsbygoogle) {
+            display: block;
+            margin: 0 auto;
           }
           .load-more {
             margin: 20px auto 0;
