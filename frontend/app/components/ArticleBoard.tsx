@@ -331,9 +331,12 @@ export function ArticleBoard({ initialArticles, artistSlug, category, search }: 
           }
           .ad-container__inline {
             margin-top: 16px;
+            width: 100%;
           }
           :global(.ad-container__inline .adsbygoogle) {
-            margin: 0 !important;
+            display: block !important;
+            width: 100% !important;
+            margin: 0 auto !important;
           }
           .load-more {
             margin: 20px auto 0;
