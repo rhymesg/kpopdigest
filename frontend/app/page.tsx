@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 import { ArticleBoard } from './components/ArticleBoard';
 import { ArticleFilters } from './components/ArticleFilters';
-import { fetchArticles } from '@/lib/articles';
+import { fetchArticlesWithHighlights } from '@/lib/articles';
 import { fetchArtistsByViews } from '@/lib/artists';
 import { SITE_CONTENT } from '@/lib/content';
 import { normalizeCategory } from '@/lib/categories';
@@ -24,7 +24,11 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     : searchParams?.search;
   const search = searchParam?.trim() ? searchParam.trim() : undefined;
 
-  const articles = await fetchArticles({ limit: DEFAULT_PAGE_SIZE, category, search });
+  const { articles, featuredArticles } = await fetchArticlesWithHighlights({
+    limit: DEFAULT_PAGE_SIZE,
+    category,
+    search,
+  });
   const artists = await fetchArtistsByViews();
 
   return (
@@ -42,7 +46,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
       <section>
         <ArticleFilters currentCategory={category} currentSearch={search} />
-        <ArticleBoard initialArticles={articles} category={category} search={search} />
+        <ArticleBoard
+          initialArticles={articles}
+          featuredArticles={featuredArticles}
+          category={category}
+          search={search}
+        />
       </section>
 
       <section className="seo-blurb">

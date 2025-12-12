@@ -51,6 +51,7 @@ def ensure_schema(conn: psycopg.Connection) -> None:
             "summary" TEXT,
             "viewCount" INTEGER NOT NULL DEFAULT 0,
             "externalClickCount" INTEGER NOT NULL DEFAULT 0,
+            "likeCount" BIGINT NOT NULL DEFAULT 0,
             "createdAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
             "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
@@ -97,6 +98,18 @@ def ensure_schema(conn: psycopg.Connection) -> None:
         )
         cur.execute(
             'ALTER TABLE "Article" ALTER COLUMN "sourceLanguage" SET NOT NULL'
+        )
+        cur.execute(
+            'ALTER TABLE "Article" ADD COLUMN IF NOT EXISTS "likeCount" BIGINT'
+        )
+        cur.execute(
+            'ALTER TABLE "Article" ALTER COLUMN "likeCount" SET DEFAULT 0'
+        )
+        cur.execute(
+            'UPDATE "Article" SET "likeCount" = 0 WHERE "likeCount" IS NULL'
+        )
+        cur.execute(
+            'ALTER TABLE "Article" ALTER COLUMN "likeCount" SET NOT NULL'
         )
     conn.commit()
 

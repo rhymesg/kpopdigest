@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { ArticleBoard } from '../components/ArticleBoard';
 import { ArticleFilters } from '../components/ArticleFilters';
 import Link from 'next/link';
-import { fetchArticles } from '@/lib/articles';
+import { fetchArticlesWithHighlights } from '@/lib/articles';
 import { getArtistBySlug } from '@/lib/artists';
 import { incrementArtistPageView } from '@/lib/metrics';
 import { SITE_CONTENT } from '@/lib/content';
@@ -32,7 +32,7 @@ export default async function ArtistPage({ params, searchParams }: Props) {
     : searchParams?.search;
   const search = searchParam?.trim() ? searchParam.trim() : undefined;
 
-  const articles = await fetchArticles({
+  const { articles, featuredArticles } = await fetchArticlesWithHighlights({
     limit: DEFAULT_PAGE_SIZE,
     artistSlug: artist.slug,
     category,
@@ -52,6 +52,7 @@ export default async function ArtistPage({ params, searchParams }: Props) {
         <ArticleFilters currentCategory={category} currentSearch={search} />
         <ArticleBoard
           initialArticles={articles}
+          featuredArticles={featuredArticles}
           artistSlug={artist.slug}
           category={category}
           search={search}

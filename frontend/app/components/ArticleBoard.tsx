@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Script from 'next/script';
 
-import type { ArticleRow } from '@/lib/articles';
+import type { ArticleBadge, ArticleRow } from '@/lib/articles';
 import type { ArticleCategory } from '@/lib/categories';
 import { DEFAULT_PAGE_SIZE } from '@/lib/constants';
 
@@ -13,12 +13,23 @@ declare global {
   }
 }
 
+type ArticleWithBadges = ArticleRow & { badges?: ArticleBadge[] };
+
 interface ArticleBoardProps {
   initialArticles: ArticleRow[];
+  featuredArticles?: ArticleWithBadges[];
   artistSlug?: string;
   category?: ArticleCategory;
   search?: string;
 }
+
+const LIKED_COOKIE_KEY = 'kpd_liked_articles';
+const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
+
+const BADGE_LABELS: Record<ArticleBadge, string> = {
+  dailyBest: 'Daily Best',
+  weeklyBest: 'Weekly Best',
+};
 
 const pushAds = () => {
   if (typeof window === 'undefined') return;
@@ -32,17 +43,46 @@ const pushAds = () => {
   });
 };
 
-export function ArticleBoard({ initialArticles, artistSlug, category, search }: ArticleBoardProps) {
+const readLikedArticleIds = () => {
+  if (typeof document === 'undefined') return new Set<string>();
+  const cookieString = document.cookie || '';
+  const entries = cookieString.split('; ').filter(Boolean);
+  const target = entries.find((entry) => entry.startsWith(`${LIKED_COOKIE_KEY}=`));
+  if (!target) return new Set<string>();
+  try {
+    const value = decodeURIComponent(target.split('=')[1] ?? '');
+    if (!value) return new Set<string>();
+    return new Set(value.split(',').filter(Boolean));
+  } catch {
+    return new Set<string>();
+  }
+};
+
+const persistLikedArticleIds = (ids: Set<string>) => {
+  if (typeof document === 'undefined') return;
+  const serialized = encodeURIComponent(Array.from(ids).join(','));
+  document.cookie = `${LIKED_COOKIE_KEY}=${serialized}; path=/; max-age=${COOKIE_MAX_AGE_SECONDS}; SameSite=Lax`;
+};
+
+export function ArticleBoard({ initialArticles, featuredArticles = [], artistSlug, category, search }: ArticleBoardProps) {
   const [articles, setArticles] = useState(initialArticles);
+  const [featured, setFeatured] = useState<ArticleWithBadges[]>(featuredArticles);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(initialArticles.length === DEFAULT_PAGE_SIZE);
+  const [likedArticleIds, setLikedArticleIds] = useState<Set<string>>(new Set());
+  const [pendingLikeIds, setPendingLikeIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setArticles(initialArticles);
+    setFeatured(featuredArticles);
     setHasMore(initialArticles.length === DEFAULT_PAGE_SIZE);
     setExpandedId(null);
-  }, [initialArticles]);
+  }, [initialArticles, featuredArticles]);
+
+  useEffect(() => {
+    setLikedArticleIds(readLikedArticleIds());
+  }, []);
 
   useEffect(() => {
     if (!hasMore) return;
@@ -68,7 +108,14 @@ export function ArticleBoard({ initialArticles, artistSlug, category, search }: 
       const res = await fetch(`/api/articles?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to load more articles');
       const data = await res.json();
-      setArticles((prev) => [...prev, ...data.articles]);
+      const featuredIds = new Set(featured.map((article) => article.id));
+      setArticles((prev) => {
+        const existingIds = new Set(prev.map((article) => article.id));
+        const incoming: ArticleRow[] = data.articles.filter(
+          (article: ArticleRow) => !existingIds.has(article.id) && !featuredIds.has(article.id),
+        );
+        return [...prev, ...incoming];
+      });
       setHasMore(data.hasMore);
     } catch (error) {
       console.error(error);
@@ -81,6 +128,51 @@ export function ArticleBoard({ initialArticles, artistSlug, category, search }: 
     setExpandedId((prev) => (prev === id ? null : id));
   };
 
+  const likeArticle = async (articleId: string) => {
+    if (likedArticleIds.has(articleId) || pendingLikeIds.has(articleId)) {
+      return;
+    }
+    setPendingLikeIds((prev) => {
+      const next = new Set(prev);
+      next.add(articleId);
+      return next;
+    });
+    try {
+      const res = await fetch(`/api/articles/${articleId}/like`, { method: 'POST' });
+      if (!res.ok) {
+        throw new Error('Failed to like article');
+      }
+      const data = await res.json();
+      const nextCount = typeof data.likeCount === 'number' ? data.likeCount : 0;
+      updateLikeCount(articleId, nextCount);
+      setLikedArticleIds((prev) => {
+        const next = new Set(prev);
+        next.add(articleId);
+        persistLikedArticleIds(next);
+        return next;
+      });
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setPendingLikeIds((prev) => {
+        const next = new Set(prev);
+        next.delete(articleId);
+        return next;
+      });
+    }
+  };
+
+  const updateLikeCount = (articleId: string, likeCount: number) => {
+    setArticles((prev) =>
+      prev.map((article) => (article.id === articleId ? { ...article, likeCount } : article)),
+    );
+    setFeatured((prev) =>
+      prev.map((article) => (article.id === articleId ? { ...article, likeCount } : article)),
+    );
+  };
+
+  const displayedArticles = useMemo(() => [...featured, ...articles], [featured, articles]);
+
   return (
     <>
       <Script
@@ -91,7 +183,7 @@ export function ArticleBoard({ initialArticles, artistSlug, category, search }: 
         crossOrigin="anonymous"
       />
       <div className="board">
-        {articles.map((article) => {
+        {displayedArticles.map((article) => {
           const isExpanded = expandedId === article.id;
           const mainTitle = article.title ?? article.titleRaw;
           const destination = article.originalUrl;
@@ -104,9 +196,22 @@ export function ArticleBoard({ initialArticles, artistSlug, category, search }: 
                 day: 'numeric',
                 timeZone: 'Asia/Seoul',
               });
+          const isLiked = likedArticleIds.has(article.id);
+          const isPending = pendingLikeIds.has(article.id);
+          const likeDisabled = isLiked || isPending;
+          const likeLabel = isLiked ? 'You already liked this article' : 'Like this article';
           return (
             <div key={article.id} className="card">
               <button className={`title ${isExpanded ? 'expanded' : ''}`} onClick={() => toggle(article.id)}>
+                {article.badges?.length ? (
+                  <div className="badge-row">
+                    {article.badges.map((badge) => (
+                      <span key={badge} className={`best-badge best-badge--${badge}`}>
+                        {BADGE_LABELS[badge]}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
                 <div className="meta-line">
                   <span className={categoryClass}>{article.source}</span>
                   <span className="date">{publishedDateLabel}</span>
@@ -116,18 +221,33 @@ export function ArticleBoard({ initialArticles, artistSlug, category, search }: 
               {isExpanded && (
                 <div className="details">
                   <div className="meta-row">
-                    <span className="pill pill__category">{article.category}</span>
-                    <span className="pill pill__timestamp">
-                      {Number.isNaN(published.getTime())
-                        ? 'Unknown time'
-                        : published.toLocaleString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            timeZone: 'Asia/Seoul',
-                          }) + ' KST'}
-                    </span>
+                    <div className="pill-group">
+                      <span className="pill pill__category">{article.category}</span>
+                      <span className="pill pill__timestamp">
+                        {Number.isNaN(published.getTime())
+                          ? 'Unknown time'
+                          :
+                            published.toLocaleString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              timeZone: 'Asia/Seoul',
+                            }) + ' KST'}
+                      </span>
+                    </div>
+                    <button
+                      className={`like-button ${isLiked ? 'like-button--active' : ''}`}
+                      type="button"
+                      onClick={() => likeArticle(article.id)}
+                      aria-label={likeLabel}
+                      disabled={likeDisabled}
+                    >
+                      <span className="thumb-icon" aria-hidden="true">
+                        👍
+                      </span>
+                      <span className="like-count">{article.likeCount ?? 0}</span>
+                    </button>
                   </div>
                   <a href={destination} target="_blank" rel="noreferrer" className="original-link">
                     <h4>{article.titleRaw} <span className="external-icon">⧉</span></h4>
@@ -221,6 +341,27 @@ export function ArticleBoard({ initialArticles, artistSlug, category, search }: 
             transform: translateY(-50%) rotate(180deg);
             color: #64748b;
           }
+          .badge-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 6px;
+          }
+          .best-badge {
+            display: inline-flex;
+            align-items: center;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            border-radius: 999px;
+            padding: 2px 10px;
+            background: #fef3c7;
+            color: #92400e;
+          }
+          .best-badge--weeklyBest {
+            background: #dbeafe;
+            color: #1d4ed8;
+          }
           .meta-line {
             display: flex;
             justify-content: space-between;
@@ -270,8 +411,17 @@ export function ArticleBoard({ initialArticles, artistSlug, category, search }: 
           }
           .meta-row {
             display: flex;
+            align-items: center;
+            justify-content: space-between;
             gap: 12px;
+            flex-wrap: wrap;
             margin-bottom: 16px;
+          }
+          .pill-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
           }
           .pill {
             display: inline-flex;
@@ -292,6 +442,40 @@ export function ArticleBoard({ initialArticles, artistSlug, category, search }: 
             background: #f1f5f9;
             color: #64748b;
             border: 1px solid #e2e8f0;
+          }
+          .like-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            border: 1px solid #e2e8f0;
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            background: #ffffff;
+            transition: all 0.2s ease;
+          }
+          .like-button:hover:not(:disabled) {
+            border-color: #94a3b8;
+            color: #0f172a;
+          }
+          .like-button--active {
+            background: #0f172a;
+            color: #ffffff;
+            border-color: #0f172a;
+          }
+          .like-button:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+          }
+          .thumb-icon {
+            font-size: 16px;
+            line-height: 1;
+          }
+          .like-count {
+            min-width: 1.5rem;
+            text-align: right;
           }
           .original-link {
             display: block;
