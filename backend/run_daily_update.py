@@ -14,7 +14,7 @@ from src.pipeline import (
 
 PER_ARTIST_CONFIG: dict[str, int] = {
     "naver_news": 20,
-    "naver_blog": 10,
+    "naver_blog": 5,
     "daum": 20,
 }
 
