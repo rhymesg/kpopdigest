@@ -113,21 +113,13 @@ export async function fetchArticlesWithHighlights(
   const { limit, artistSlug, category, search } = options;
   const { daily, weekly } = await fetchBestArticles({ artistSlug, category, search });
 
-  const featuredMap = new Map<string, ArticleWithBadges>();
-  if (daily) {
-    featuredMap.set(daily.id, { ...daily, badges: ['dailyBest'] });
-  }
+  const featuredArticles: ArticleWithBadges[] = [];
   if (weekly) {
-    const existing = featuredMap.get(weekly.id);
-    if (existing) {
-      const mergedBadges = new Set(existing.badges ?? []);
-      mergedBadges.add('weeklyBest');
-      featuredMap.set(weekly.id, { ...existing, badges: Array.from(mergedBadges) as ArticleBadge[] });
-    } else {
-      featuredMap.set(weekly.id, { ...weekly, badges: ['weeklyBest'] });
-    }
+    featuredArticles.push({ ...weekly, badges: ['weeklyBest'] });
   }
-  const featuredArticles = Array.from(featuredMap.values());
+  if (daily) {
+    featuredArticles.push({ ...daily, badges: ['dailyBest'] });
+  }
   const extraRequired = featuredArticles.length;
 
   const articles = await fetchArticles({

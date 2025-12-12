@@ -21,6 +21,8 @@ interface ArticleBoardProps {
   search?: string;
 }
 
+type DisplayArticle = ArticleWithBadges & { __displayKey: string };
+
 const LIKED_COOKIE_KEY = 'kpd_liked_articles';
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
@@ -65,7 +67,7 @@ const persistLikedArticleIds = (ids: Set<string>) => {
 export function ArticleBoard({ initialArticles, featuredArticles = [], artistSlug, category, search }: ArticleBoardProps) {
   const [articles, setArticles] = useState<ArticleWithBadges[]>(initialArticles);
   const [featured, setFeatured] = useState<ArticleWithBadges[]>(featuredArticles);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(initialArticles.length === DEFAULT_PAGE_SIZE);
   const [likedArticleIds, setLikedArticleIds] = useState<Set<string>>(new Set());
@@ -75,7 +77,7 @@ export function ArticleBoard({ initialArticles, featuredArticles = [], artistSlu
     setArticles(initialArticles);
     setFeatured(featuredArticles);
     setHasMore(initialArticles.length === DEFAULT_PAGE_SIZE);
-    setExpandedId(null);
+    setExpandedKey(null);
   }, [initialArticles, featuredArticles]);
 
   useEffect(() => {
@@ -88,9 +90,9 @@ export function ArticleBoard({ initialArticles, featuredArticles = [], artistSlu
   }, [hasMore]);
 
   useEffect(() => {
-    if (!expandedId) return;
+    if (!expandedKey) return;
     pushAds();
-  }, [expandedId]);
+  }, [expandedKey]);
 
   const loadMore = async () => {
     if (isLoading) return;
@@ -122,8 +124,8 @@ export function ArticleBoard({ initialArticles, featuredArticles = [], artistSlu
     }
   };
 
-  const toggle = (id: string) => {
-    setExpandedId((prev) => (prev === id ? null : id));
+  const toggle = (displayKey: string) => {
+    setExpandedKey((prev) => (prev === displayKey ? null : displayKey));
   };
 
   const likeArticle = async (articleId: string) => {
@@ -169,7 +171,17 @@ export function ArticleBoard({ initialArticles, featuredArticles = [], artistSlu
     );
   };
 
-  const displayedArticles = useMemo(() => [...featured, ...articles], [featured, articles]);
+  const displayedArticles = useMemo<DisplayArticle[]>(() => {
+    const featuredWithKeys: DisplayArticle[] = featured.map((article, idx) => ({
+      ...article,
+      __displayKey: `featured-${article.badges?.[0] ?? 'best'}-${article.id}-${idx}`,
+    }));
+    const regularWithKeys: DisplayArticle[] = articles.map((article) => ({
+      ...article,
+      __displayKey: `article-${article.id}`,
+    }));
+    return [...featuredWithKeys, ...regularWithKeys];
+  }, [featured, articles]);
 
   return (
     <>
@@ -182,7 +194,8 @@ export function ArticleBoard({ initialArticles, featuredArticles = [], artistSlu
       />
       <div className="board">
         {displayedArticles.map((article) => {
-          const isExpanded = expandedId === article.id;
+          const displayKey = article.__displayKey;
+          const isExpanded = expandedKey === displayKey;
           const mainTitle = article.title ?? article.titleRaw;
           const destination = article.originalUrl;
           const published = new Date(article.publishedAt);
@@ -194,24 +207,30 @@ export function ArticleBoard({ initialArticles, featuredArticles = [], artistSlu
                 day: 'numeric',
                 timeZone: 'Asia/Seoul',
               });
+          const badgeKey = article.badges?.[0];
+          const badgeLabel = badgeKey ? BADGE_LABELS[badgeKey] : null;
+          const badgeIcon = badgeKey === 'weeklyBest' ? '🔥' : badgeKey === 'dailyBest' ? '🏆' : null;
           const isLiked = likedArticleIds.has(article.id);
           const isPending = pendingLikeIds.has(article.id);
           const likeDisabled = isLiked || isPending;
           const likeLabel = isLiked ? 'You already liked this article' : 'Like this article';
+          const cardClass = ['card', badgeKey ? `card--${badgeKey}` : ''].filter(Boolean).join(' ');
           return (
-            <div key={article.id} className="card">
-              <button className={`title ${isExpanded ? 'expanded' : ''}`} onClick={() => toggle(article.id)}>
-                {article.badges?.length ? (
-                  <div className="badge-row">
-                    {article.badges.map((badge) => (
-                      <span key={badge} className={`best-badge best-badge--${badge}`}>
-                        {BADGE_LABELS[badge]}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
+            <div key={displayKey} className={cardClass}>
+              <button className={`title ${isExpanded ? 'expanded' : ''}`} onClick={() => toggle(displayKey)}>
                 <div className="meta-line">
-                  <span className={categoryClass}>{article.source}</span>
+                  <span className="meta-line__left">
+                    {badgeLabel ? (
+                      <span className={`best-badge best-badge--${badgeKey}`}>
+                        {badgeIcon ? (
+                          <span className="best-badge__icon" aria-hidden="true">{badgeIcon}</span>
+                        ) : null}
+                        {badgeLabel}
+                      </span>
+                    ) : (
+                      <span className={categoryClass}>{article.source}</span>
+                    )}
+                  </span>
                   <span className="date">{publishedDateLabel}</span>
                 </div>
                 <span className="headline">{mainTitle}</span>
@@ -300,6 +319,14 @@ export function ArticleBoard({ initialArticles, featuredArticles = [], artistSlu
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
             transition: all 0.2s ease;
           }
+          .card--dailyBest {
+            background: #fffbeb;
+            border-color: #e2e8f0;
+          }
+          .card--weeklyBest {
+            background: #fff1f5;
+            border-color: #e2e8f0;
+          }
           .card:hover {
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             transform: translateY(-1px);
@@ -339,11 +366,6 @@ export function ArticleBoard({ initialArticles, featuredArticles = [], artistSlu
             transform: translateY(-50%) rotate(180deg);
             color: #64748b;
           }
-          .badge-row {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 6px;
-          }
           .best-badge {
             display: inline-flex;
             align-items: center;
@@ -355,16 +377,33 @@ export function ArticleBoard({ initialArticles, featuredArticles = [], artistSlu
             padding: 2px 10px;
             background: #fef3c7;
             color: #92400e;
+            gap: 4px;
+          }
+          .best-badge__icon {
+            font-size: 13px;
+            line-height: 1;
           }
           .best-badge--weeklyBest {
-            background: #dbeafe;
-            color: #1d4ed8;
+            background: #fce7f3;
+            color: #be185d;
           }
           .meta-line {
             display: flex;
             justify-content: space-between;
-            align-items: baseline;
+            align-items: center;
             gap: 12px;
+          }
+          .meta-line__left {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+          }
+          .meta-line__left .meta__source {
+            font-size: 11px;
+          }
+          .meta-line .date {
+            margin-left: auto;
+            text-align: right;
           }
           .headline {
             flex: 1 1 auto;
@@ -390,8 +429,8 @@ export function ArticleBoard({ initialArticles, featuredArticles = [], artistSlu
             color: #047857;
           }
           .meta__source--community {
-            background: #fce7f3;
-            color: #be185d;
+            background: #ede9fe;
+            color: #5b21b6;
           }
           .meta__source--etc {
             background: #f1f5f9;
