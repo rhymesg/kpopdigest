@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Script from 'next/script';
 
-import type { ArticleBadge, ArticleRow } from '@/lib/articles';
+import type { ArticleBadge, ArticleRow, ArticleWithBadges } from '@/lib/articles';
 import type { ArticleCategory } from '@/lib/categories';
 import { DEFAULT_PAGE_SIZE } from '@/lib/constants';
 
@@ -12,8 +12,6 @@ declare global {
     adsbygoogle?: unknown[];
   }
 }
-
-type ArticleWithBadges = ArticleRow & { badges?: ArticleBadge[] };
 
 interface ArticleBoardProps {
   initialArticles: ArticleRow[];
@@ -65,7 +63,7 @@ const persistLikedArticleIds = (ids: Set<string>) => {
 };
 
 export function ArticleBoard({ initialArticles, featuredArticles = [], artistSlug, category, search }: ArticleBoardProps) {
-  const [articles, setArticles] = useState(initialArticles);
+  const [articles, setArticles] = useState<ArticleWithBadges[]>(initialArticles);
   const [featured, setFeatured] = useState<ArticleWithBadges[]>(featuredArticles);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
