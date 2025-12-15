@@ -7,6 +7,7 @@ import json
 import sys
 
 from src.artist_registry import list_registered_artists
+from src.llm_costs import TokenUsage, estimate_model_cost, record_usage
 from src.pipeline import (
     DEFAULT_MODEL,
     PipelineError,
@@ -56,6 +57,7 @@ def main() -> int:
         return 2
 
     payload: list[dict] | None = None
+    usage_by_model: dict[str, TokenUsage] = {}
 
     try:
         include_rss = args.api in {"korea_herald_rss", "all"}
@@ -68,27 +70,30 @@ def main() -> int:
 
         if args.store:
             if include_rss:
-                fetch_rss_rewrite_and_store(
+                _, usage = fetch_rss_rewrite_and_store(
                     limit=args.limit,
                     model=args.model,
                 )
+                record_usage(usage_by_model, args.model, usage)
 
             for artist_name in artists:
                 for api_choice in apis:
-                    fetch_rewrite_and_store(
+                    _, usage = fetch_rewrite_and_store(
                         api_choice,
                         artist=artist_name,
                         limit=args.limit,
                         model=args.model,
                     )
+                    record_usage(usage_by_model, args.model, usage)
         else:
             payload = []
 
             if include_rss:
-                rss_articles, rss_results = fetch_rss_and_rewrite(
+                rss_articles, rss_results, usage = fetch_rss_and_rewrite(
                     limit=args.limit,
                     model=args.model,
                 )
+                record_usage(usage_by_model, args.model, usage)
                 for article, result in zip(rss_articles, rss_results, strict=False):
                     payload.append(
                         {
@@ -106,12 +111,13 @@ def main() -> int:
 
             for artist_name in artists:
                 for api_choice in apis:
-                    articles, results = fetch_and_rewrite(
+                    articles, results, usage = fetch_and_rewrite(
                         api_choice,
                         artist=artist_name,
                         limit=args.limit,
                         model=args.model,
                     )
+                    record_usage(usage_by_model, args.model, usage)
 
                     for article, result in zip(articles, results, strict=False):
                         payload.append(
@@ -134,6 +140,23 @@ def main() -> int:
 
     if not args.store and payload is not None:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
+
+    if usage_by_model:
+        total_cost = 0.0
+        for model_name, usage in usage_by_model.items():
+            cost = estimate_model_cost(model_name, usage)
+            total_cost += cost
+            print(
+                "[pipeline] Usage",
+                f"model={model_name}",
+                f"input={usage.input_tokens}",
+                f"cached={usage.cached_input_tokens}",
+                f"output={usage.output_tokens}",
+                f"estimated_cost=${cost:.4f}",
+            )
+        print(f"[pipeline] Estimated total cost: ${total_cost:.4f}")
+    else:
+        print("[pipeline] No LLM usage recorded.")
     return 0
 
 

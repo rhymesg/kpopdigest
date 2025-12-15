@@ -21,10 +21,11 @@ from .db import (
     get_or_create_artist,
     link_article_to_artist,
 )
+from .korea_herald_rss import RSSFetchError, fetch_korea_herald_rss
+from .llm_costs import TokenUsage
 from .llm_models import ChatGPTRewriteOutput, ChatGPTRSSRewriteOutput
 from .naver_blog_api import fetch_naver_blog_posts
 from .naver_news_api import fetch_naver_news
-from .korea_herald_rss import RSSFetchError, fetch_korea_herald_rss
 from .url_utils import resolve_final_url, is_url_blocked
 
 PerArtistAPI = Literal["naver_news", "naver_blog", "daum"]
@@ -47,6 +48,8 @@ class RewriteResult:
 class RSSRewriteResult:
     article: ArticleOriginal
     rewrite: ChatGPTRSSRewriteOutput
+
+
 
 
 def _find_existing_article_id(
@@ -211,7 +214,7 @@ def fetch_and_rewrite(
     artist: str,
     limit: int,
     model: str = DEFAULT_MODEL,
-) -> Tuple[Sequence[ArticleOriginal], Sequence[ChatGPTRewriteOutput]]:
+) -> Tuple[Sequence[ArticleOriginal], Sequence[ChatGPTRewriteOutput], TokenUsage]:
     """Fetch articles from the chosen API and rewrite them via ChatGPT."""
 
     definition = _resolve_artist(artist)
@@ -222,23 +225,25 @@ def fetch_and_rewrite(
     articles = _fetch_articles(api, definition=definition, limit=limit)
     print(f"[pipeline] Retrieved {len(articles)} articles.")
     if not articles:
-        return articles, []
+        return articles, [], TokenUsage()
 
     client = ChatGPTClient(model=model)
     print(f"[pipeline] Running rewrites with model '{model}'...")
     rewrites: list[ChatGPTRewriteOutput] = []
+    usage_totals = TokenUsage()
     total = min(len(articles), limit)
     for index, article in enumerate(articles[:limit], start=1):
         print(
             f"[pipeline] ({index}/{total}) {article.source} | {article.title_original[:60]}"
         )
         try:
-            rewrite = client.rewrite(article)
+            rewrite, usage_metrics = client.rewrite(article)
         except ChatGPTRewriteError as exc:
             raise PipelineError(f"LLM rewrite failed for {article.original_url}: {exc}") from exc
         rewrites.append(rewrite)
+        usage_totals.add_mapping(usage_metrics)
     print("[pipeline] Completed rewrites.")
-    return articles, rewrites
+    return articles, rewrites, usage_totals
 
 
 def fetch_rewrite_and_store(
@@ -247,7 +252,7 @@ def fetch_rewrite_and_store(
     artist: str,
     limit: int,
     model: str = DEFAULT_MODEL,
-) -> list[RewriteResult]:
+) -> tuple[list[RewriteResult], TokenUsage]:
     """Fetch new articles, rewrite them, and persist results to the database."""
 
     definition = _resolve_artist(artist)
@@ -258,7 +263,7 @@ def fetch_rewrite_and_store(
     articles = _fetch_articles(api, definition=definition, limit=limit)
     print(f"[pipeline] Retrieved {len(articles)} articles.")
     if not articles:
-        return []
+        return [], TokenUsage()
 
     try:
         with get_connection() as conn:
@@ -269,6 +274,7 @@ def fetch_rewrite_and_store(
             stored: list[RewriteResult] = []
             linked_existing = 0
             enabled_count = 0
+            usage_totals = TokenUsage()
 
             print(f"[pipeline] Running rewrites with model '{model}'...")
 
@@ -329,13 +335,14 @@ def fetch_rewrite_and_store(
                     flush=True,
                 )
                 try:
-                    rewrite = client.rewrite(article)
+                    rewrite, usage_metrics = client.rewrite(article)
                 except ChatGPTRewriteError as exc:
                     print(
                         f"[pipeline]    -> LLM rewrite failed: {exc}. Skipping article.",
                         flush=True,
                     )
                     continue
+                usage_totals.add_mapping(usage_metrics)
 
                 enabled, evaluation_reason = _evaluate_rewrite(
                     rewrite=rewrite,
@@ -403,7 +410,7 @@ def fetch_rewrite_and_store(
                 f"[pipeline] Completed. Stored {len(stored)} new articles ({enabled_count} enabled), "
                 f"linked {linked_existing} existing, skipped {skipped} duplicates."
             )
-            return stored
+            return stored, usage_totals
     except DatabaseError as exc:
         raise PipelineError(str(exc)) from exc
 
@@ -412,25 +419,26 @@ def fetch_rss_and_rewrite(
     *,
     limit: int,
     model: str = DEFAULT_MODEL,
-) -> Tuple[Sequence[ArticleOriginal], Sequence[ChatGPTRSSRewriteOutput]]:
+) -> Tuple[Sequence[ArticleOriginal], Sequence[ChatGPTRSSRewriteOutput], TokenUsage]:
     """Fetch Korea Herald RSS articles and rewrite them via ChatGPT."""
 
     print(f"[pipeline] Fetching up to {limit} 'korea_herald_rss' results...")
     articles = _fetch_rss_articles(limit)
     print(f"[pipeline] Retrieved {len(articles)} articles.")
     if not articles:
-        return articles, []
+        return articles, [], TokenUsage()
 
     candidate_artists = list_registered_artists()
     client = ChatGPTClient(model=model)
     rewrites: list[ChatGPTRSSRewriteOutput] = []
+    usage_totals = TokenUsage()
     total = min(len(articles), limit)
     print(f"[pipeline] Running RSS rewrites with model '{model}'...")
     for index, article in enumerate(articles[:limit], start=1):
         preview = article.title_original[:60]
         print(f"[pipeline] ({index}/{total}) {article.source} | {preview}")
         try:
-            rewrite = client.rewrite_rss(
+            rewrite, usage_metrics = client.rewrite_rss(
                 article,
                 candidate_artists=candidate_artists,
             )
@@ -439,22 +447,23 @@ def fetch_rss_and_rewrite(
                 f"LLM rewrite failed for {article.original_url}: {exc}"
             ) from exc
         rewrites.append(rewrite)
+        usage_totals.add_mapping(usage_metrics)
     print("[pipeline] Completed RSS rewrites.")
-    return articles, rewrites
+    return articles, rewrites, usage_totals
 
 
 def fetch_rss_rewrite_and_store(
     *,
     limit: int,
     model: str = DEFAULT_MODEL,
-) -> list[RSSRewriteResult]:
+) -> tuple[list[RSSRewriteResult], TokenUsage]:
     """Fetch RSS articles, run rewrites, and persist results to the database."""
 
     print(f"[pipeline] Fetching up to {limit} 'korea_herald_rss' results...")
     articles = _fetch_rss_articles(limit)
     print(f"[pipeline] Retrieved {len(articles)} articles.")
     if not articles:
-        return []
+        return [], TokenUsage()
 
     candidate_names = list_registered_artists()
     definition_cache = {
@@ -471,6 +480,7 @@ def fetch_rss_rewrite_and_store(
             stored: list[RSSRewriteResult] = []
             linked_existing = 0
             enabled_count = 0
+            usage_totals = TokenUsage()
 
             print(f"[pipeline] Running RSS rewrites with model '{model}'...")
 
@@ -502,7 +512,7 @@ def fetch_rss_rewrite_and_store(
                     flush=True,
                 )
                 try:
-                    rewrite = client.rewrite_rss(
+                    rewrite, usage_metrics = client.rewrite_rss(
                         article,
                         candidate_artists=candidate_names,
                     )
@@ -512,6 +522,7 @@ def fetch_rss_rewrite_and_store(
                         flush=True,
                     )
                     continue
+                usage_totals.add_mapping(usage_metrics)
 
                 artist_definitions = [
                     definition_cache[name]
@@ -628,6 +639,6 @@ def fetch_rss_rewrite_and_store(
                 f"[pipeline] Completed. Stored {len(stored)} new articles ({enabled_count} enabled), "
                 f"linked {linked_existing} existing, skipped {skipped} duplicates."
             )
-            return stored
+            return stored, usage_totals
     except DatabaseError as exc:
         raise PipelineError(str(exc)) from exc

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any, Sequence, cast
+from typing import Any, Mapping, Sequence, cast
 
 from openai import OpenAI, OpenAIError
 
@@ -65,7 +65,7 @@ class ChatGPTClient:
         self._client = OpenAI(api_key=key)
         self._model = model
 
-    def rewrite(self, article: ArticleOriginal) -> ChatGPTRewriteOutput:
+    def rewrite(self, article: ArticleOriginal) -> tuple[ChatGPTRewriteOutput, Mapping[str, int]]:
         """Call the OpenAI Responses API and return normalized rewrite output."""
 
         request_payload = build_rewrite_input(article)
@@ -117,6 +117,8 @@ class ChatGPTClient:
             has_content = bool(title.strip() or summary.strip())
             relevant = has_content
 
+        usage = _extract_usage(response)
+
         return cast(
             ChatGPTRewriteOutput,
             {
@@ -125,11 +127,11 @@ class ChatGPTClient:
                 "title": title,
                 "summary": summary,
             },
-        )
+        ), usage
 
     def rewrite_rss(
         self, article: ArticleOriginal, *, candidate_artists: Sequence[str]
-    ) -> ChatGPTRSSRewriteOutput:
+    ) -> tuple[ChatGPTRSSRewriteOutput, Mapping[str, int]]:
         """Rewrite an RSS article and extract relevant artists."""
 
         request_payload = build_rss_rewrite_input(article, candidate_artists)
@@ -216,6 +218,8 @@ class ChatGPTClient:
                 "OpenAI response marked article relevant but did not return any known artists."
             )
 
+        usage = _extract_usage(response)
+
         return cast(
             ChatGPTRSSRewriteOutput,
             {
@@ -225,4 +229,24 @@ class ChatGPTClient:
                 "summary": summary,
                 "artists": artists if relevant else [],
             },
-        )
+        ), usage
+
+
+def _extract_usage(response: Any) -> Mapping[str, int]:
+    usage_obj = getattr(response, "usage", None)
+    if usage_obj is None:
+        return {
+            "input_tokens": 0,
+            "cached_input_tokens": 0,
+            "output_tokens": 0,
+        }
+
+    input_tokens = getattr(usage_obj, "input_tokens", 0) or 0
+    output_tokens = getattr(usage_obj, "output_tokens", 0) or 0
+    cached_input = getattr(usage_obj, "cache_read_input_tokens", 0) or 0
+
+    return {
+        "input_tokens": int(input_tokens),
+        "cached_input_tokens": int(cached_input),
+        "output_tokens": int(output_tokens),
+    }

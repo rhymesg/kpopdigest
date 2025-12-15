@@ -89,12 +89,14 @@ def main() -> int:
 
     try:
         client = ChatGPTClient(model=args.model)
-        result = client.rewrite(article)
+        result, usage = client.rewrite(article)
     except ChatGPTRewriteError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
 
     print(json.dumps(result, ensure_ascii=False, indent=2))
+    if usage:
+        print(json.dumps({"usage": usage}, ensure_ascii=False, indent=2))
     return 0
 
 
