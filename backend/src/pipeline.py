@@ -8,6 +8,7 @@ import uuid
 from typing import Any, Literal, Mapping, Sequence, Tuple
 
 import psycopg
+from psycopg.errors import UniqueViolation
 
 from .artist_registry import ArtistDefinition, get_artist_definition, list_registered_artists
 from .article_models import ArticleOriginal
@@ -347,6 +348,33 @@ def fetch_rewrite_and_store(
                         definitions=[definition],
                     )
                     conn.commit()
+                except UniqueViolation:
+                    conn.rollback()
+                    existing_article_id = _find_existing_article_id(
+                        conn, urls_to_check
+                    )
+                    if not existing_article_id:
+                        raise PipelineError(
+                            "Unique constraint violated but article not found"
+                        )
+                    try:
+                        created = _link_article_to_definitions(
+                            conn,
+                            article_id=existing_article_id,
+                            definitions=[definition],
+                        )
+                        conn.commit()
+                        if created:
+                            linked_existing += 1
+                            print(
+                                "[pipeline]    -> Concurrent duplicate; linked existing."
+                            )
+                    except psycopg.Error as exc:
+                        conn.rollback()
+                        raise PipelineError(
+                            f"Failed to link existing article {article.original_url}: {exc}"
+                        ) from exc
+                    continue
                 except psycopg.Error as exc:
                     conn.rollback()
                     raise PipelineError(
@@ -530,6 +558,35 @@ def fetch_rss_rewrite_and_store(
                         )
 
                     conn.commit()
+                except UniqueViolation:
+                    conn.rollback()
+                    existing_article_id = _find_existing_article_id(
+                        conn, urls_to_check
+                    )
+                    if not existing_article_id:
+                        raise PipelineError(
+                            "Unique constraint violated but article not found"
+                        )
+                    try:
+                        created_links = 0
+                        if artist_definitions:
+                            created_links = _link_article_to_definitions(
+                                conn,
+                                article_id=existing_article_id,
+                                definitions=artist_definitions,
+                            )
+                        conn.commit()
+                        if created_links:
+                            linked_existing += 1
+                            print(
+                                "[pipeline]    -> Concurrent duplicate; linked existing."
+                            )
+                    except psycopg.Error as exc:
+                        conn.rollback()
+                        raise PipelineError(
+                            f"Failed to link existing article {article.original_url}: {exc}"
+                        ) from exc
+                    continue
                 except psycopg.Error as exc:
                     conn.rollback()
                     raise PipelineError(

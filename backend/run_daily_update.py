@@ -63,10 +63,6 @@ def main() -> int:
     return 0
 
 
-if __name__ == "__main__":
-    raise SystemExit(main())
-
-
 def _get_artist_limit(artist_name: str, default_limit: int) -> int:
     """Return the fetch limit after applying any artist-specific ratio."""
 
@@ -78,3 +74,7 @@ def _get_artist_limit(artist_name: str, default_limit: int) -> int:
     if adjusted == 0:
         adjusted = 1  # still fetch at least one item when ratio > 0
     return adjusted
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
