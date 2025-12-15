@@ -276,7 +276,15 @@ def fetch_rewrite_and_store(
                 preview = article.title_original[:60]
                 print(f"[pipeline] ({index}/{total}) Checking {article.source} | {preview}")
 
+                print(
+                    f"[pipeline]    -> Resolving URL for {article.original_url}",
+                    flush=True,
+                )
                 final_url, is_alive = resolve_final_url(article.original_url)
+                print(
+                    f"[pipeline]    -> URL resolved. alive={is_alive}, final={final_url}",
+                    flush=True,
+                )
                 final_url_to_store = (
                     final_url if final_url and final_url != article.original_url else None
                 )
@@ -316,6 +324,10 @@ def fetch_rewrite_and_store(
                 if is_blocked:
                     disabled_reason = disabled_reason or "blocked_url_pattern"
 
+                print(
+                    f"[pipeline]    -> Requesting rewrite from LLM",
+                    flush=True,
+                )
                 try:
                     rewrite = client.rewrite(article)
                 except ChatGPTRewriteError as exc:
@@ -466,7 +478,15 @@ def fetch_rss_rewrite_and_store(
                 preview = article.title_original[:60]
                 print(f"[pipeline] ({index}/{total}) Checking {article.source} | {preview}")
 
+                print(
+                    f"[pipeline]    -> Resolving URL for {article.original_url}",
+                    flush=True,
+                )
                 final_url, is_alive = resolve_final_url(article.original_url)
+                print(
+                    f"[pipeline]    -> URL resolved. alive={is_alive}, final={final_url}",
+                    flush=True,
+                )
                 final_url_to_store = (
                     final_url if final_url and final_url != article.original_url else None
                 )
@@ -477,6 +497,10 @@ def fetch_rss_rewrite_and_store(
                 existing_article_id: str | None = None
                 existing_article_id = _find_existing_article_id(conn, urls_to_check)
 
+                print(
+                    f"[pipeline]    -> Requesting rewrite from LLM",
+                    flush=True,
+                )
                 try:
                     rewrite = client.rewrite_rss(
                         article,
