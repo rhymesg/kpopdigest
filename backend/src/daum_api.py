@@ -118,6 +118,20 @@ def _infer_category(url: str) -> str:
     return "community"
 
 
+def _is_blacklisted_url(url: str) -> bool:
+    parsed = urlparse(url)
+    host = parsed.netloc.lower()
+    path_segments = [segment for segment in parsed.path.split("/") if segment]
+
+    if host.endswith("theqoo.net"):
+        # Require URLs like /board_name/<numeric_id>
+        if len(path_segments) < 2:
+            return True
+        if not path_segments[-1].isdigit():
+            return True
+    return False
+
+
 def fetch_daum_web(
     query: str,
     *,
@@ -134,6 +148,8 @@ def fetch_daum_web(
     for item in raw_items:
         url = str(item.get("url") or "").strip()
         if not url:
+            continue
+        if _is_blacklisted_url(url):
             continue
         datetime_raw = str(item.get("datetime") or "").strip()
         try:
