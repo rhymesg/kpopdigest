@@ -19,6 +19,7 @@ interface ArticleBoardProps {
   artistSlug?: string;
   category?: ArticleCategory;
   search?: string;
+  adminMode?: boolean;
 }
 
 type DisplayArticle = ArticleWithBadges & { __displayKey: string };
@@ -64,7 +65,14 @@ const persistLikedArticleIds = (ids: Set<string>) => {
   document.cookie = `${LIKED_COOKIE_KEY}=${serialized}; path=/; max-age=${COOKIE_MAX_AGE_SECONDS}; SameSite=Lax`;
 };
 
-export function ArticleBoard({ initialArticles, featuredArticles = [], artistSlug, category, search }: ArticleBoardProps) {
+export function ArticleBoard({
+  initialArticles,
+  featuredArticles = [],
+  artistSlug,
+  category,
+  search,
+  adminMode = false,
+}: ArticleBoardProps) {
   const [articles, setArticles] = useState<ArticleWithBadges[]>(initialArticles);
   const [featured, setFeatured] = useState<ArticleWithBadges[]>(featuredArticles);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
@@ -72,6 +80,7 @@ export function ArticleBoard({ initialArticles, featuredArticles = [], artistSlu
   const [hasMore, setHasMore] = useState(initialArticles.length === DEFAULT_PAGE_SIZE);
   const [likedArticleIds, setLikedArticleIds] = useState<Set<string>>(new Set());
   const [pendingLikeIds, setPendingLikeIds] = useState<Set<string>>(new Set());
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setArticles(initialArticles);
@@ -162,6 +171,37 @@ export function ArticleBoard({ initialArticles, featuredArticles = [], artistSlu
     }
   };
 
+  const deleteArticle = async (articleId: string, title: string) => {
+    if (!adminMode || pendingDeleteIds.has(articleId)) return;
+    const confirmed = window.confirm(`Delete this article from the site?\n\n${title}`);
+    if (!confirmed) return;
+
+    setPendingDeleteIds((prev) => {
+      const next = new Set(prev);
+      next.add(articleId);
+      return next;
+    });
+
+    try {
+      const res = await fetch(`/api/admin/articles/${articleId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        throw new Error('Failed to delete article');
+      }
+      setArticles((prev) => prev.filter((article) => article.id !== articleId));
+      setFeatured((prev) => prev.filter((article) => article.id !== articleId));
+      setExpandedKey((prev) => (prev?.includes(articleId) ? null : prev));
+    } catch (error) {
+      console.error(error);
+      window.alert('Failed to delete article.');
+    } finally {
+      setPendingDeleteIds((prev) => {
+        const next = new Set(prev);
+        next.delete(articleId);
+        return next;
+      });
+    }
+  };
+
   const updateLikeCount = (articleId: string, likeCount: number) => {
     setArticles((prev) =>
       prev.map((article) => (article.id === articleId ? { ...article, likeCount } : article)),
@@ -212,6 +252,7 @@ export function ArticleBoard({ initialArticles, featuredArticles = [], artistSlu
           const badgeIcon = badgeKey === 'weeklyBest' ? '🔥' : badgeKey === 'dailyBest' ? '🏆' : null;
           const isLiked = likedArticleIds.has(article.id);
           const isPending = pendingLikeIds.has(article.id);
+          const isDeletePending = pendingDeleteIds.has(article.id);
           const likeDisabled = isLiked || isPending;
           const likeLabel = isLiked ? 'You already liked this article' : 'Like this article';
           const cardClass = ['card', badgeKey ? `card--${badgeKey}` : ''].filter(Boolean).join(' ');
@@ -235,6 +276,19 @@ export function ArticleBoard({ initialArticles, featuredArticles = [], artistSlu
                 </div>
                 <span className="headline">{mainTitle}</span>
               </button>
+              {adminMode ? (
+                <div className="admin-actions">
+                  <button
+                    className="admin-delete"
+                    type="button"
+                    onClick={() => deleteArticle(article.id, mainTitle)}
+                    disabled={isDeletePending}
+                    aria-label={`Delete ${mainTitle}`}
+                  >
+                    {isDeletePending ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+              ) : null}
               {isExpanded && (
                 <div className="details">
                   <div className="meta-row">
@@ -345,6 +399,30 @@ export function ArticleBoard({ initialArticles, featuredArticles = [], artistSlu
             text-align: left;
             cursor: pointer;
             position: relative;
+          }
+          .admin-actions {
+            display: flex;
+            justify-content: flex-end;
+            padding: 0 20px 14px;
+            margin-top: -6px;
+          }
+          .admin-delete {
+            border: 1px solid #fecaca;
+            background: #fef2f2;
+            color: #b91c1c;
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+          }
+          .admin-delete:hover:not(:disabled) {
+            background: #fee2e2;
+            border-color: #fca5a5;
+          }
+          .admin-delete:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
           }
           .title:hover {
             background: #f8fafc;
