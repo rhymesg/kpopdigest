@@ -35,6 +35,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     <main>
       <header className="hero">
         <h1>K-POP DIGEST</h1>
+        <p className="hero__tagline">Korean K-pop sources, explained in English.</p>
         <nav className="hero-nav">
           {artists.map((artist) => (
             <Link key={artist.slug} href={`/${artist.slug}`}>
