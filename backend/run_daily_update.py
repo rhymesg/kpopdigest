@@ -15,9 +15,9 @@ from src.pipeline import (
 )
 
 PER_ARTIST_CONFIG: dict[str, int] = {
-    "naver_news": 20,
-    "naver_blog": 5,
-    "daum": 20,
+    "naver_news": 10,
+    "naver_blog": 4,
+    "daum": 10,
 }
 
 ARTIST_FETCH_RATIOS: dict[str, float] = {
@@ -28,7 +28,7 @@ ARTIST_FETCH_RATIOS: dict[str, float] = {
     "TRESURE": 0.5,
 }
 
-RSS_LIMIT = 20
+RSS_LIMIT = 5
 
 
 def run_daily_update(*, model: str, usage_bucket: dict[str, TokenUsage]) -> None:
