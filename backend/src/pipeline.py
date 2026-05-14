@@ -64,6 +64,16 @@ def _find_existing_article_id(
     return row[0] if row else None
 
 
+def _count_article_artist_links(conn: psycopg.Connection, article_id: str) -> int:
+    with conn.cursor() as cur:
+        cur.execute(
+            'SELECT COUNT(*) FROM "ArticleArtist" WHERE "articleId" = %s',
+            (article_id,),
+        )
+        row = cur.fetchone()
+    return int(row[0] if row else 0)
+
+
 def _insert_article_record(
     conn: psycopg.Connection,
     *,
@@ -506,6 +516,13 @@ def fetch_rss_rewrite_and_store(
 
                 existing_article_id: str | None = None
                 existing_article_id = _find_existing_article_id(conn, urls_to_check)
+                if existing_article_id and _count_article_artist_links(conn, existing_article_id) > 0:
+                    linked_existing += 1
+                    print(
+                        "[pipeline]    -> Already stored with artist links. Skipping LLM.",
+                        flush=True,
+                    )
+                    continue
 
                 print(
                     f"[pipeline]    -> Requesting rewrite from LLM",
