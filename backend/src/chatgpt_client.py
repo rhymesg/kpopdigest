@@ -33,7 +33,9 @@ class ChatGPTClient:
         "the key takeaway, and if it is obviously a video clip, photo set, or text "
         "write-up, mention that content type. Skip news/blog/community labels.\n"
         "5. If the page is a community update with no clear photo or video content, treat it as not relevant.\n"
-        "6. Treat pages as not relevant if they look like click-bait spam, fortune telling, unrelated product ads, or posts that only keyword-stuff the artist name without actual coverage."
+        "6. Treat the page as not relevant if titleOriginal is not clearly about K-pop, even if the description mentions an artist or K-pop keywords.\n"
+        "7. Treat the page as not relevant if the description/content mixes K-pop coverage with unrelated non-K-pop topics, multi-topic roundups, product listings, ads, or general entertainment items.\n"
+        "8. Treat pages as not relevant if they look like click-bait spam, fortune telling, unrelated product ads, or posts that only keyword-stuff the artist name without actual coverage."
     )
 
     _SYSTEM_PROMPT = (
@@ -55,7 +57,7 @@ class ChatGPTClient:
         "2. Respond ONLY with JSON containing the keys relevant, titleRaw, title, summary, and artists.\n"
         "3. If no candidate artist is clearly covered, set relevant to false, return empty strings for the other text fields, and set artists to an empty list.\n"
         f"{_COMMON_REWRITE_RULES}\n"
-        "7. Always set artists to the list (in candidateArtists order) of artists that match the article; never invent new names."
+        "9. Always set artists to the list (in candidateArtists order) of artists that match the article; never invent new names."
     )
 
     def __init__(self, *, api_key: str | None = None, model: str) -> None:
